@@ -1,54 +1,184 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Menu, X } from "lucide-react";
 
 export default function Sidebar({ onLogout }) {
   const [isOpen, setIsOpen] = useState(true);
   const navigate = useNavigate();
+  const location = useLocation();
 
   const menuItems = [
-    { name: "Dashboard", path: "/" },
     { name: "Create User", path: "/CreateUser" },
     { name: "Products", path: "/products" },
     { name: "POS", path: "/pos" },
   ];
 
   return (
-    <div
-      className={`bg-white shadow-lg flex flex-col transition-all duration-300 ${
-        isOpen ? "w-64" : "w-20"
-      }`}
+    <aside
+      style={{
+        width: isOpen ? 280 : 88,
+        transition: "width 220ms ease",
+        padding: "1rem",
+        display: "flex",
+      }}
     >
+      <style>{`
+        .sbCard { backdrop-filter: blur(6px); }
+        .sbBtn { transition: transform 120ms ease, background 120ms ease, border-color 120ms ease, box-shadow 120ms ease; }
+        .sbBtn:hover { transform: translateY(-1px); box-shadow: 0 10px 22px rgba(15, 23, 42, 0.12); }
+        .sbLink { transition: transform 120ms ease, background 120ms ease, border-color 120ms ease, box-shadow 120ms ease; }
+        .sbLink:hover { transform: translateY(-1px); box-shadow: 0 10px 22px rgba(15, 23, 42, 0.10); }
+        @media (max-width: 880px) {
+          .sbWrap { width: 88px !important; }
+        }
+      `}</style>
+
+      <div
+        className="sbWrap sbCard"
+        style={{
+          width: "100%",
+          background: "rgba(255,255,255,0.86)",
+          border: "1px solid rgba(226, 232, 240, 0.85)",
+          borderRadius: "18px",
+          boxShadow:
+            "0 24px 60px rgba(15, 23, 42, 0.12), 0 2px 0 rgba(255,255,255,0.6) inset",
+          overflow: "hidden",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
       {/* Header */}
-      <div className="flex items-center justify-between p-4">
-        {isOpen && <h1 className="text-xl font-bold">My App</h1>}
-        <button onClick={() => setIsOpen(!isOpen)}>
-          {isOpen ? <X /> : <Menu />}
-        </button>
-      </div>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "0.75rem",
+            padding: "1rem",
+            background:
+              "linear-gradient(90deg, rgba(59,130,246,0.18), rgba(16,185,129,0.12))",
+            borderBottom: "1px solid rgba(226, 232, 240, 0.9)",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", minWidth: 0 }}>
+            <div
+              aria-hidden="true"
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: 12,
+                background: "rgba(15, 23, 42, 0.9)",
+                boxShadow: "0 10px 22px rgba(15, 23, 42, 0.18)",
+              }}
+            />
+            {isOpen ? (
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontWeight: 900, color: "#0f172a", letterSpacing: "-0.02em" }}>
+                  Barker Admin
+                </div>
+                <div style={{ fontSize: "0.85rem", color: "#475569" }}>Pet Supply Dashboard</div>
+              </div>
+            ) : null}
+          </div>
+
+          <button
+            type="button"
+            className="sbBtn"
+            onClick={() => setIsOpen((v) => !v)}
+            aria-label={isOpen ? "Collapse sidebar" : "Expand sidebar"}
+            style={{
+              width: 38,
+              height: 38,
+              borderRadius: 12,
+              border: "1px solid rgba(226,232,240,0.9)",
+              background: "rgba(255,255,255,0.9)",
+              cursor: "pointer",
+              display: "grid",
+              placeItems: "center",
+            }}
+          >
+            {isOpen ? <X size={18} /> : <Menu size={18} />}
+          </button>
+        </div>
 
       {/* Navigation */}
-      <nav className="mt-4 flex-1">
-        {menuItems.map((item, index) => (
-          <div
-            key={index}
-            onClick={() => navigate(item.path)}
-            className="p-4 hover:bg-gray-200 cursor-pointer"
-          >
-            {isOpen && <span>{item.name}</span>}
-          </div>
-        ))}
-      </nav>
+        <nav style={{ padding: "0.75rem", display: "flex", flexDirection: "column", gap: "0.45rem", flex: 1 }}>
+          {menuItems.map((item) => {
+            const isActive =
+              item.path === "/"
+                ? location.pathname === "/"
+                : location.pathname.startsWith(item.path);
+
+            return (
+              <button
+                key={item.path}
+                type="button"
+                className="sbLink"
+                onClick={() => navigate(item.path)}
+                style={{
+                  textAlign: "left",
+                  width: "100%",
+                  borderRadius: "14px",
+                  padding: isOpen ? "0.85rem 0.9rem" : "0.85rem 0.75rem",
+                  border: isActive
+                    ? "1px solid rgba(59,130,246,0.35)"
+                    : "1px solid rgba(226, 232, 240, 0.9)",
+                  background: isActive
+                    ? "linear-gradient(90deg, rgba(59,130,246,0.14), rgba(16,185,129,0.10))"
+                    : "rgba(255,255,255,0.75)",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: isOpen ? "space-between" : "center",
+                  gap: "0.75rem",
+                }}
+              >
+                {isOpen ? (
+                  <>
+                    <span style={{ fontWeight: 800, color: "#0f172a" }}>{item.name}</span>
+                    <span style={{ color: "#94a3b8", fontWeight: 900 }}>›</span>
+                  </>
+                ) : (
+                  <span style={{ color: isActive ? "#1d4ed8" : "#0f172a", fontWeight: 900 }}>
+                    {item.name.slice(0, 1)}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </nav>
 
       {/* Logout */}
-      <div className="p-4">
-        <button
-          onClick={onLogout}
-          className="w-full bg-red-500 text-white p-2 rounded"
+        <div
+          style={{
+            padding: "0.9rem",
+            borderTop: "1px solid rgba(226, 232, 240, 0.9)",
+            background: "rgba(255,255,255,0.72)",
+          }}
         >
-          {isOpen ? "Sign Out" : "↩"}
-        </button>
+          <button
+            type="button"
+            onClick={onLogout}
+            className="sbBtn"
+            style={{
+              width: "100%",
+              padding: isOpen ? "0.75rem 0.9rem" : "0.75rem 0.75rem",
+              borderRadius: "14px",
+              border: "1px solid rgba(239,68,68,0.35)",
+              background: "rgba(239,68,68,0.10)",
+              color: "#b91c1c",
+              fontWeight: 900,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "0.5rem",
+            }}
+          >
+            {isOpen ? "Sign Out" : "↩"}
+          </button>
+        </div>
       </div>
-    </div>
+    </aside>
   );
 }
