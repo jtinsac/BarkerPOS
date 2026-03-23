@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { ref, update, onValue } from "firebase/database";
 import { db } from "../../lib/firebase";
+import ImageUpload from "../../components/ImageUpload";
 
 const EditProductForm = ({ product, onSuccess }) => {
   // Initialize form state with the existing product data
@@ -8,6 +9,7 @@ const EditProductForm = ({ product, onSuccess }) => {
   const [price, setPrice] = useState(product.price || "");
   const [stock, setStock] = useState(product.stock || "");
   const [category, setCategory] = useState(product.category || "");
+  const [imageUrl, setImageUrl] = useState(product.imageUrl || null);
   const [categories, setCategories] = useState([]);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -90,6 +92,7 @@ const EditProductForm = ({ product, onSuccess }) => {
         price: Number(price),
         stock: Number(stock),
         category: category,
+        imageUrl: imageUrl || null,
       });
 
       setSuccess("Product updated successfully!");
@@ -285,6 +288,12 @@ const EditProductForm = ({ product, onSuccess }) => {
             ))}
           </select>
         </div>
+
+        <ImageUpload
+          onImageUpload={setImageUrl}
+          currentImageUrl={product.imageUrl}
+          disabled={isSubmitting}
+        />
 
         <button
           type="submit"

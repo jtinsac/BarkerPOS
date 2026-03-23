@@ -254,6 +254,12 @@ const Products = () => {
         const bv = Number(b?.price ?? 0);
         return (av - bv) * dir;
       }
+      
+      if (sort.key === "stock") {
+        const av = Number(a?.stock ?? 0);
+        const bv = Number(b?.stock ?? 0);
+        return (av - bv) * dir;
+      }
 
       const av = String(a?.name ?? "").toLowerCase();
       const bv = String(b?.name ?? "").toLowerCase();
@@ -676,6 +682,30 @@ const Products = () => {
                     </span>
                   </th>
                   <th
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => toggleSort("stock")}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") toggleSort("stock");
+                    }}
+                    style={{
+                      textAlign: "right",
+                      padding: "0.9rem 1rem",
+                      fontSize: "0.8rem",
+                      letterSpacing: "0.06em",
+                      textTransform: "uppercase",
+                      color: "#475569",
+                      borderBottom: "1px solid #e2e8f0",
+                      whiteSpace: "nowrap",
+                      cursor: "pointer",
+                      userSelect: "none",
+                    }}
+                  >
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}>
+                      Stock <span style={{ color: "#64748b", fontWeight: 900 }}>{sortLabel("stock")}</span>
+                    </span>
+                  </th>
+                  <th
                     style={{
                       textAlign: "right",
                       padding: "0.9rem 1rem",
@@ -706,17 +736,6 @@ const Products = () => {
                     >
                       <div style={{ display: "flex", flexDirection: "column", gap: "0.15rem" }}>
                         <span>{product.name ?? "—"}</span>
-                        <span
-                          style={{
-                            fontSize: "0.85rem",
-                            color: product.stock > 0 ? "#64748b" : "red",
-                            fontWeight: product.stock > 0 ? "normal" : "600",
-                          }}
-                        >
-                          {product.stock > 0
-                            ? `In stock: ${product.stock}`
-                            : "Out of stock"}
-                        </span>
                       </div>
                     </td>
 
@@ -755,6 +774,33 @@ const Products = () => {
                       }}
                     >
                       ₱{Number(product.price ?? 0).toLocaleString()}
+                    </td>
+
+                    <td
+                      style={{
+                        padding: "0.9rem 1rem",
+                        borderBottom: "1px solid #f1f5f9",
+                        fontSize: "0.95rem",
+                        textAlign: "right",
+                        whiteSpace: "nowrap",
+                        fontVariantNumeric: "tabular-nums",
+                      }}
+                    >
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.15rem" }}>
+                        <span style={{
+                          fontWeight: "700",
+                          color: product.stock > 0 ? "#0f172a" : "#dc2626"
+                        }}>
+                          {Number(product.stock ?? 0).toLocaleString()}
+                        </span>
+                        <span style={{
+                          fontSize: "0.8rem",
+                          color: product.stock > 0 ? "#059669" : "#dc2626",
+                          fontWeight: "600"
+                        }}>
+                          {product.stock > 0 ? "In Stock" : "Out of Stock"}
+                        </span>
+                      </div>
                     </td>
 
                     <td

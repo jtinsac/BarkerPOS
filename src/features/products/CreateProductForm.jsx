@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { ref, push, set, onValue } from "firebase/database";
 import { db } from "../../lib/firebase";
+import ImageUpload from "../../components/ImageUpload";
 
 export default function CreateProductForm({ onSuccess } = {}) {
   const [name, setName] = useState("");
@@ -8,6 +9,7 @@ export default function CreateProductForm({ onSuccess } = {}) {
   const [stock, setStock] = useState("");
   const [category, setCategory] = useState("");
   const [newCategory, setNewCategory] = useState("");
+  const [imageUrl, setImageUrl] = useState(null);
   const [categories, setCategories] = useState([]);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -90,6 +92,7 @@ export default function CreateProductForm({ onSuccess } = {}) {
         price: Number(price),
         stock: Number(stock),
         category: finalCategory,
+        imageUrl: imageUrl || null,
       });
 
       setSuccess("Product added successfully!");
@@ -98,6 +101,7 @@ export default function CreateProductForm({ onSuccess } = {}) {
       setStock("");
       setCategory("");
       setNewCategory("");
+      setImageUrl(null);
       onSuccess?.();
     } catch (err) {
       setError("Failed to add product");
@@ -319,6 +323,11 @@ export default function CreateProductForm({ onSuccess } = {}) {
             onBlur={(e) => Object.assign(e.target.style, inputStyle)}
           />
         </div>
+
+        <ImageUpload
+          onImageUpload={setImageUrl}
+          disabled={isSubmitting}
+        />
 
         <button
           type="submit"

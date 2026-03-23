@@ -92,6 +92,44 @@ const ViewProductForm = ({ product, onClose }) => {
           </div>
         </div>
 
+        {product.imageUrl && (
+          <div>
+            <label
+              style={{
+                display: "block",
+                marginBottom: "0.5rem",
+                fontSize: "0.9rem",
+                fontWeight: 600,
+                color: "#374151",
+              }}
+            >
+              Product Image
+            </label>
+            <div style={{
+              ...displayStyle,
+              padding: "0.5rem",
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center"
+            }}>
+              <img
+                src={product.imageUrl}
+                alt={product.name}
+                style={{
+                  maxWidth: "100%",
+                  maxHeight: "200px",
+                  borderRadius: "8px",
+                  objectFit: "cover",
+                }}
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                  e.target.parentElement.innerHTML = '<span style="color: #9ca3af; font-style: italic;">Image not available</span>';
+                }}
+              />
+            </div>
+          </div>
+        )}
+
         <div>
           <label
             style={{
