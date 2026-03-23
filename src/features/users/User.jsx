@@ -3,6 +3,7 @@ import { ref, onValue, remove } from "firebase/database";
 import { db } from "../../lib/firebase";
 import { signOut } from "firebase/auth";
 import { auth } from "../../lib/firebase";
+import { deleteUserFromSystem } from "../../services/userService";
 import Swal from "sweetalert2";
 import { createRoot } from "react-dom/client";
 import CreateUserForm from "./CreateUserForm.jsx";
@@ -50,9 +51,8 @@ const User = () => {
 
     if (result.isConfirmed) {
       try {
-        // Delete the user from Firebase
-        const userRef = ref(db, `users/${user.uid}`);
-        await remove(userRef);
+        // Delete from both Firebase Auth and Database using backend API
+        await deleteUserFromSystem(user.uid);
 
         // Show success message
         Swal.fire({

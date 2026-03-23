@@ -7,6 +7,7 @@ const EditUserForm = ({ user, onSuccess }) => {
   const [name, setName] = useState(user.name || "");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const inputStyle = {
     width: "100%",
@@ -45,10 +46,16 @@ const EditUserForm = ({ user, onSuccess }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    if (isSubmitting) return; // Prevent multiple submissions
+    
     if (!name) {
       setError("Please enter a name");
       return;
     }
+
+    setIsSubmitting(true);
+    setError("");
+    setSuccess("");
 
     try {
       // Update only the name in Firebase
@@ -58,7 +65,6 @@ const EditUserForm = ({ user, onSuccess }) => {
       });
 
       setSuccess("User updated successfully!");
-      setError("");
       
       // Close the modal after a short delay
       setTimeout(() => {
@@ -67,6 +73,8 @@ const EditUserForm = ({ user, onSuccess }) => {
     } catch (err) {
       setError("Failed to update user");
       console.error("Error updating user:", err);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -248,19 +256,32 @@ const EditUserForm = ({ user, onSuccess }) => {
 
         <button
           type="submit"
-          style={buttonStyle}
+          disabled={isSubmitting}
+          style={{
+            ...buttonStyle,
+            opacity: isSubmitting ? 0.6 : 1,
+            cursor: isSubmitting ? "not-allowed" : "pointer",
+            background: isSubmitting 
+              ? "rgba(156, 163, 175, 0.2)" 
+              : "linear-gradient(135deg, rgba(59,130,246,0.08) 0%, rgba(16,185,129,0.06) 100%)",
+            color: isSubmitting ? "#9ca3af" : "#1d4ed8"
+          }}
           onMouseEnter={(e) => {
-            e.target.style.background = "linear-gradient(135deg, rgba(59,130,246,0.12) 0%, rgba(16,185,129,0.08) 100%)";
-            e.target.style.transform = "translateY(-1px)";
-            e.target.style.boxShadow = "0 12px 28px rgba(15, 23, 42, 0.12)";
+            if (!isSubmitting) {
+              e.target.style.background = "linear-gradient(135deg, rgba(59,130,246,0.12) 0%, rgba(16,185,129,0.08) 100%)";
+              e.target.style.transform = "translateY(-1px)";
+              e.target.style.boxShadow = "0 12px 28px rgba(15, 23, 42, 0.12)";
+            }
           }}
           onMouseLeave={(e) => {
-            e.target.style.background = "linear-gradient(135deg, rgba(59,130,246,0.08) 0%, rgba(16,185,129,0.06) 100%)";
-            e.target.style.transform = "translateY(0)";
-            e.target.style.boxShadow = "0 8px 20px rgba(15, 23, 42, 0.08)";
+            if (!isSubmitting) {
+              e.target.style.background = "linear-gradient(135deg, rgba(59,130,246,0.08) 0%, rgba(16,185,129,0.06) 100%)";
+              e.target.style.transform = "translateY(0)";
+              e.target.style.boxShadow = "0 8px 20px rgba(15, 23, 42, 0.08)";
+            }
           }}
         >
-          Update User
+          {isSubmitting ? "Updating User..." : "Update User"}
         </button>
       </form>
     </div>

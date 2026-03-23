@@ -1,5 +1,5 @@
 import {createContext, useState, useEffect} from "react";
-import {onAuthStateChanged} from "firebase/auth";
+import {onAuthStateChanged, signOut} from "firebase/auth";
 import {ref, get} from "firebase/database";
 import {auth, db} from "../lib/firebase";
 
@@ -20,18 +20,33 @@ export function UserProvider ({children}) {
 
           if (snapshot.exists()) {
             const dbUserData = snapshot.val();
-            setRole(dbUserData.role);
-            setUserData(dbUserData);
+            
+            // Check if user has valid role
+            if (dbUserData.role && (dbUserData.role === 'owner' || dbUserData.role === 'cashier')) {
+              setRole(dbUserData.role);
+              setUserData(dbUserData);
+              setUser(firebaseUser);
+            } else {
+              // Invalid role - sign out user
+              console.warn("User has invalid role:", dbUserData.role);
+              await signOut(auth);
+              setUser(null);
+              setUserData(null);
+              setRole(null);
+            }
           } else {
-            // User exists in auth but not in database
-            setRole(null);
+            // User exists in auth but not in database - sign them out
+            console.warn("User authenticated but no database record found. Signing out.");
+            await signOut(auth);
+            setUser(null);
             setUserData(null);
+            setRole(null);
           }
-
-          setUser(firebaseUser);
         } catch (error) {
           console.error("Error fetching user data:", error);
-          setUser(firebaseUser);
+          // On error, sign out user for security
+          await signOut(auth);
+          setUser(null);
           setRole(null);
           setUserData(null);
         }

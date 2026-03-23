@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "../../lib/firebase";
+import { auth, db } from "../../lib/firebase";
+import { ref, get } from "firebase/database";
 import { useNavigate } from "react-router-dom";
 
 export default function LoginForm() {
@@ -17,10 +18,46 @@ export default function LoginForm() {
     setError("");
 
     try {
-      await signInWithEmailAndPassword(auth, email.trim(), password);
+      // Step 1: Authenticate with Firebase Auth
+      const userCredential = await signInWithEmailAndPassword(auth, email.trim(), password);
+      const user = userCredential.user;
+      
+      // Step 2: Check if user exists in Realtime Database
+      const userRef = ref(db, `users/${user.uid}`);
+      const snapshot = await get(userRef);
+      
+      if (!snapshot.exists()) {
+        // User exists in Auth but not in Database - sign them out and show error
+        await auth.signOut();
+        setError("Access denied. Your account has been deactivated. Please contact support.");
+        return;
+      }
+      
+      const userData = snapshot.val();
+      
+      // Optional: Check if user has valid role
+      if (!userData.role || (userData.role !== 'owner' && userData.role !== 'cashier')) {
+        await auth.signOut();
+        setError("Access denied. Invalid user role. Please contact support.");
+        return;
+      }
+      
+      // Success - both Auth and Database validation passed
       navigate("/dashboard");
+      
     } catch (err) {
-      setError(err?.message || "Login failed. Please try again.");
+      // Handle authentication errors
+      if (err.code === 'auth/user-not-found') {
+        setError("No account found with this email address.");
+      } else if (err.code === 'auth/wrong-password') {
+        setError("Incorrect password. Please try again.");
+      } else if (err.code === 'auth/invalid-email') {
+        setError("Invalid email address format.");
+      } else if (err.code === 'auth/user-disabled') {
+        setError("This account has been disabled. Please contact support.");
+      } else {
+        setError(err?.message || "Login failed. Please try again.");
+      }
     } finally {
       setIsLoading(false);
     }

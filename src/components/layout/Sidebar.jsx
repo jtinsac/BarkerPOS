@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Menu, X, BarChart3, Users, Package, ShoppingCart, LogOut } from "lucide-react";
+import { Menu, X, BarChart3, Users, Package, ShoppingCart, Receipt, LogOut } from "lucide-react";
 
 export default function Sidebar({ onLogout }) {
   const [isOpen, setIsOpen] = useState(true);
@@ -12,6 +12,7 @@ export default function Sidebar({ onLogout }) {
     { name: "Users", path: "/users", icon: Users },
     { name: "Products", path: "/products", icon: Package },
     { name: "POS", path: "/pos", icon: ShoppingCart },
+    { name: "Transactions", path: "/transactions", icon: Receipt },
   ];
 
   return (

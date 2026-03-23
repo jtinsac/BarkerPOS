@@ -11,6 +11,7 @@ const EditProductForm = ({ product, onSuccess }) => {
   const [categories, setCategories] = useState([]);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const inputStyle = {
     width: "100%",
@@ -70,10 +71,16 @@ const EditProductForm = ({ product, onSuccess }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    if (isSubmitting) return; // Prevent multiple submissions
+    
     if (!name || !price || !stock || !category) {
       setError("Please fill all fields");
       return;
     }
+
+    setIsSubmitting(true);
+    setError("");
+    setSuccess("");
 
     try {
       // Update the product in Firebase
@@ -86,7 +93,6 @@ const EditProductForm = ({ product, onSuccess }) => {
       });
 
       setSuccess("Product updated successfully!");
-      setError("");
       
       // Close the modal after a short delay
       setTimeout(() => {
@@ -95,6 +101,8 @@ const EditProductForm = ({ product, onSuccess }) => {
     } catch (err) {
       setError("Failed to update product");
       console.error("Error updating product:", err);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -280,19 +288,32 @@ const EditProductForm = ({ product, onSuccess }) => {
 
         <button
           type="submit"
-          style={buttonStyle}
+          disabled={isSubmitting}
+          style={{
+            ...buttonStyle,
+            opacity: isSubmitting ? 0.6 : 1,
+            cursor: isSubmitting ? "not-allowed" : "pointer",
+            background: isSubmitting 
+              ? "rgba(156, 163, 175, 0.2)" 
+              : "linear-gradient(135deg, rgba(59,130,246,0.08) 0%, rgba(16,185,129,0.06) 100%)",
+            color: isSubmitting ? "#9ca3af" : "#1d4ed8"
+          }}
           onMouseEnter={(e) => {
-            e.target.style.background = "linear-gradient(135deg, rgba(59,130,246,0.12) 0%, rgba(16,185,129,0.08) 100%)";
-            e.target.style.transform = "translateY(-1px)";
-            e.target.style.boxShadow = "0 12px 28px rgba(15, 23, 42, 0.12)";
+            if (!isSubmitting) {
+              e.target.style.background = "linear-gradient(135deg, rgba(59,130,246,0.12) 0%, rgba(16,185,129,0.08) 100%)";
+              e.target.style.transform = "translateY(-1px)";
+              e.target.style.boxShadow = "0 12px 28px rgba(15, 23, 42, 0.12)";
+            }
           }}
           onMouseLeave={(e) => {
-            e.target.style.background = "linear-gradient(135deg, rgba(59,130,246,0.08) 0%, rgba(16,185,129,0.06) 100%)";
-            e.target.style.transform = "translateY(0)";
-            e.target.style.boxShadow = "0 8px 20px rgba(15, 23, 42, 0.08)";
+            if (!isSubmitting) {
+              e.target.style.background = "linear-gradient(135deg, rgba(59,130,246,0.08) 0%, rgba(16,185,129,0.06) 100%)";
+              e.target.style.transform = "translateY(0)";
+              e.target.style.boxShadow = "0 8px 20px rgba(15, 23, 42, 0.08)";
+            }
           }}
         >
-          Update Product
+          {isSubmitting ? "Updating Product..." : "Update Product"}
         </button>
       </form>
     </div>

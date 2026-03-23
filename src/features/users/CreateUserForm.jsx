@@ -11,6 +11,7 @@ function CreateUserForm({ onSuccess } = {}) {
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("");
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const inputStyle = {
     width: "100%",
@@ -47,10 +48,16 @@ function CreateUserForm({ onSuccess } = {}) {
 
   async function handleSubmit(e) {
     e.preventDefault();
+    
+    if (isSubmitting) return; // Prevent multiple submissions
+    
     if (!name || !email || !password || !role) {
       setError("Please fill all fields");
       return;
     }
+
+    setIsSubmitting(true);
+    setError("");
 
     try {
       const secondaryApp = initializeApp(firebaseConfig, "Secondary");
@@ -77,11 +84,12 @@ function CreateUserForm({ onSuccess } = {}) {
       setEmail("");
       setPassword("");
       setRole("");
-      setError("");
 
       onSuccess?.();
     } catch (error) {
       setError(error?.message || "Failed to create user");
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -250,19 +258,32 @@ function CreateUserForm({ onSuccess } = {}) {
 
         <button
           type="submit"
-          style={buttonStyle}
+          disabled={isSubmitting}
+          style={{
+            ...buttonStyle,
+            opacity: isSubmitting ? 0.6 : 1,
+            cursor: isSubmitting ? "not-allowed" : "pointer",
+            background: isSubmitting 
+              ? "rgba(156, 163, 175, 0.2)" 
+              : "linear-gradient(135deg, rgba(59,130,246,0.08) 0%, rgba(16,185,129,0.06) 100%)",
+            color: isSubmitting ? "#9ca3af" : "#1d4ed8"
+          }}
           onMouseEnter={(e) => {
-            e.target.style.background = "linear-gradient(135deg, rgba(59,130,246,0.12) 0%, rgba(16,185,129,0.08) 100%)";
-            e.target.style.transform = "translateY(-1px)";
-            e.target.style.boxShadow = "0 12px 28px rgba(15, 23, 42, 0.12)";
+            if (!isSubmitting) {
+              e.target.style.background = "linear-gradient(135deg, rgba(59,130,246,0.12) 0%, rgba(16,185,129,0.08) 100%)";
+              e.target.style.transform = "translateY(-1px)";
+              e.target.style.boxShadow = "0 12px 28px rgba(15, 23, 42, 0.12)";
+            }
           }}
           onMouseLeave={(e) => {
-            e.target.style.background = "linear-gradient(135deg, rgba(59,130,246,0.08) 0%, rgba(16,185,129,0.06) 100%)";
-            e.target.style.transform = "translateY(0)";
-            e.target.style.boxShadow = "0 8px 20px rgba(15, 23, 42, 0.08)";
+            if (!isSubmitting) {
+              e.target.style.background = "linear-gradient(135deg, rgba(59,130,246,0.08) 0%, rgba(16,185,129,0.06) 100%)";
+              e.target.style.transform = "translateY(0)";
+              e.target.style.boxShadow = "0 8px 20px rgba(15, 23, 42, 0.08)";
+            }
           }}
         >
-          Create User
+          {isSubmitting ? "Creating User..." : "Create User"}
         </button>
       </form>
     </div>

@@ -11,6 +11,7 @@ export default function CreateProductForm({ onSuccess } = {}) {
   const [categories, setCategories] = useState([]);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const inputStyle = {
     width: "100%",
@@ -69,10 +70,16 @@ export default function CreateProductForm({ onSuccess } = {}) {
   async function handleSubmit(e) {
     e.preventDefault();
 
+    if (isSubmitting) return; // Prevent multiple submissions
+
     if (!name || !price || !stock || (!category && !newCategory)) {
       setError("Please fill all fields and select or add a category");
       return;
     }
+
+    setIsSubmitting(true);
+    setError("");
+    setSuccess("");
 
     try {
       let finalCategory = category || newCategory;
@@ -86,7 +93,6 @@ export default function CreateProductForm({ onSuccess } = {}) {
       });
 
       setSuccess("Product added successfully!");
-      setError("");
       setName("");
       setPrice("");
       setStock("");
@@ -96,6 +102,8 @@ export default function CreateProductForm({ onSuccess } = {}) {
     } catch (err) {
       setError("Failed to add product");
       console.error(err);
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -314,19 +322,32 @@ export default function CreateProductForm({ onSuccess } = {}) {
 
         <button
           type="submit"
-          style={buttonStyle}
+          disabled={isSubmitting}
+          style={{
+            ...buttonStyle,
+            opacity: isSubmitting ? 0.6 : 1,
+            cursor: isSubmitting ? "not-allowed" : "pointer",
+            background: isSubmitting 
+              ? "rgba(156, 163, 175, 0.2)" 
+              : "linear-gradient(135deg, rgba(59,130,246,0.08) 0%, rgba(16,185,129,0.06) 100%)",
+            color: isSubmitting ? "#9ca3af" : "#1d4ed8"
+          }}
           onMouseEnter={(e) => {
-            e.target.style.background = "linear-gradient(135deg, rgba(59,130,246,0.12) 0%, rgba(16,185,129,0.08) 100%)";
-            e.target.style.transform = "translateY(-1px)";
-            e.target.style.boxShadow = "0 12px 28px rgba(15, 23, 42, 0.12)";
+            if (!isSubmitting) {
+              e.target.style.background = "linear-gradient(135deg, rgba(59,130,246,0.12) 0%, rgba(16,185,129,0.08) 100%)";
+              e.target.style.transform = "translateY(-1px)";
+              e.target.style.boxShadow = "0 12px 28px rgba(15, 23, 42, 0.12)";
+            }
           }}
           onMouseLeave={(e) => {
-            e.target.style.background = "linear-gradient(135deg, rgba(59,130,246,0.08) 0%, rgba(16,185,129,0.06) 100%)";
-            e.target.style.transform = "translateY(0)";
-            e.target.style.boxShadow = "0 8px 20px rgba(15, 23, 42, 0.08)";
+            if (!isSubmitting) {
+              e.target.style.background = "linear-gradient(135deg, rgba(59,130,246,0.08) 0%, rgba(16,185,129,0.06) 100%)";
+              e.target.style.transform = "translateY(0)";
+              e.target.style.boxShadow = "0 8px 20px rgba(15, 23, 42, 0.08)";
+            }
           }}
         >
-          Add Product
+          {isSubmitting ? "Adding Product..." : "Add Product"}
         </button>
       </form>
     </div>

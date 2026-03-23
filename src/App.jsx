@@ -9,6 +9,7 @@ import ProtectedRoute from "./routes/ProctedRoute";
 import POS from "./features/pos/POS";
 import Products from "./features/products/Products";
 import CreateProduct from "./features/products/CreateProduct";
+import Transactions from "./features/transactions/Transactions";
 
 function App() {
   return (
@@ -58,7 +59,16 @@ function App() {
           }
         />
 
-                <Route
+        <Route
+          path="/transactions"
+          element={
+            <ProtectedRoute allowedRoles={["owner"]}>
+              <Transactions />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
           path="/CreateProduct"
           element={
             <ProtectedRoute allowedRoles={["owner", "cashier"]}>

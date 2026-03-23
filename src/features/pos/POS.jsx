@@ -7,7 +7,7 @@ import MainLayout from "../../components/layout/MainLayout.jsx";
 import Header from "../../components/layout/Header.jsx";
 
 // Custom Confirmation Modal Component
-const CheckoutConfirmationModal = ({ cart, total, onConfirm, onCancel }) => {
+const CheckoutConfirmationModal = ({ cart, total, onConfirm, onCancel, isProcessing }) => {
   return (
     <div
       style={{
@@ -183,28 +183,38 @@ const CheckoutConfirmationModal = ({ cart, total, onConfirm, onCancel }) => {
             </button>
             <button
               onClick={onConfirm}
+              disabled={isProcessing}
               style={{
-                background: "linear-gradient(135deg, #059669 0%, #047857 100%)",
+                background: isProcessing 
+                  ? "rgba(156, 163, 175, 0.2)" 
+                  : "linear-gradient(135deg, #059669 0%, #047857 100%)",
                 border: "none",
                 borderRadius: "12px",
                 padding: "0.75rem 1.5rem",
                 fontWeight: 700,
                 fontSize: "0.95rem",
-                color: "white",
-                cursor: "pointer",
+                color: isProcessing ? "#9ca3af" : "white",
+                cursor: isProcessing ? "not-allowed" : "pointer",
                 transition: "all 150ms ease",
-                boxShadow: "0 4px 12px rgba(5, 150, 105, 0.3)"
+                boxShadow: isProcessing 
+                  ? "none" 
+                  : "0 4px 12px rgba(5, 150, 105, 0.3)",
+                opacity: isProcessing ? 0.6 : 1
               }}
               onMouseEnter={(e) => {
-                e.target.style.transform = "translateY(-1px)";
-                e.target.style.boxShadow = "0 6px 16px rgba(5, 150, 105, 0.4)";
+                if (!isProcessing) {
+                  e.target.style.transform = "translateY(-1px)";
+                  e.target.style.boxShadow = "0 6px 16px rgba(5, 150, 105, 0.4)";
+                }
               }}
               onMouseLeave={(e) => {
-                e.target.style.transform = "translateY(0)";
-                e.target.style.boxShadow = "0 4px 12px rgba(5, 150, 105, 0.3)";
+                if (!isProcessing) {
+                  e.target.style.transform = "translateY(0)";
+                  e.target.style.boxShadow = "0 4px 12px rgba(5, 150, 105, 0.3)";
+                }
               }}
             >
-              Process Transaction
+              {isProcessing ? "Processing..." : "Process Transaction"}
             </button>
           </div>
         </div>
@@ -287,7 +297,7 @@ const Toast = ({ message, type, onClose }) => {
 };
 
 const POS = () => {
-  const { role, user } = useContext(UserContext);
+  const { role, user, userData } = useContext(UserContext);
   const [products, setProducts] = useState([]);
   const [cart, setCart] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -295,6 +305,7 @@ const POS = () => {
   const [total, setTotal] = useState(0);
   const [toast, setToast] = useState(null);
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
+  const [isProcessingCheckout, setIsProcessingCheckout] = useState(false);
 
   async function handleLogout() {
     try {
@@ -310,6 +321,7 @@ const handleCheckout = async () => {
 };
 
 const processCheckout = async () => {
+  setIsProcessingCheckout(true);
   setShowCheckoutModal(false);
   
   try {
@@ -321,7 +333,7 @@ const processCheckout = async () => {
     const newTransaction = {
       createdAt: Date.now(),
       userId: currentUser.uid,
-      userName: user?.name || "Unknown User",
+      userName: userData?.name || "Unknown User",
       total,
       items: cart.map(item => ({
         productId: item.id,
@@ -356,6 +368,8 @@ const processCheckout = async () => {
   } catch(error) {
     console.error("Checkout error:", error);
     setToast({ message: "Checkout failed. Please try again.", type: "error" });
+  } finally {
+    setIsProcessingCheckout(false);
   }
 };
 
@@ -968,13 +982,16 @@ const processCheckout = async () => {
     return (
       <>
         <Header />
-        {posContent}
+        <div style={{ paddingTop: "80px", height: "100vh", overflow: "hidden" }}>
+          {posContent}
+        </div>
         {showCheckoutModal && (
           <CheckoutConfirmationModal
             cart={cart}
             total={total}
             onConfirm={processCheckout}
             onCancel={() => setShowCheckoutModal(false)}
+            isProcessing={isProcessingCheckout}
           />
         )}
         {toast && (
@@ -1001,6 +1018,7 @@ const processCheckout = async () => {
           total={total}
           onConfirm={processCheckout}
           onCancel={() => setShowCheckoutModal(false)}
+          isProcessing={isProcessingCheckout}
         />
       )}
       {toast && (
