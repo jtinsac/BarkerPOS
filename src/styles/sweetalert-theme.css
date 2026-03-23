@@ -1,0 +1,25 @@
+.swal2-popup.swal2-barker-popup {
+  background: rgba(255, 255, 255, 0.96) !important;
+  border: 1px solid rgba(226, 232, 240, 0.9) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.10) !important;
+  backdrop-filter: blur(4px) !important;
+  padding: 0 !important;             
+  font-family: inherit !important;  
+}
+
+.swal2-popup.swal2-barker-popup .swal2-html-container {
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.swal2-popup.swal2-barker-popup .swal2-close {
+  border-radius: 12px !important;
+  border: 1px solid rgba(226, 232, 240, 0.9) !important;
+  background: rgba(255, 255, 255, 0.9) !important;
+}
+
+.swal2-popup.swal2-barker-popup .swal2-close:hover {
+  background: rgba(248, 250, 252, 0.95) !important;
+}
+

@@ -1,16 +1,12 @@
 import { useState } from "react";
-import { createUserWithEmailAndPassword } from "firebase/auth";
-import {ref, set} from "firebase/database";
-import { db, firebaseConfig } from "../../lib/firebase";
-import {initializeApp, deleteApp} from "firebase/app";
-import { getAuth } from "firebase/auth";
+import { ref, update } from "firebase/database";
+import { db } from "../../lib/firebase";
 
-function CreateUserForm({ onSuccess } = {}) {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [role, setRole] = useState("");
+const EditUserForm = ({ user, onSuccess }) => {
+  // Initialize form state with the existing user data
+  const [name, setName] = useState(user.name || "");
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   const inputStyle = {
     width: "100%",
@@ -45,45 +41,34 @@ function CreateUserForm({ onSuccess } = {}) {
     boxShadow: "0 8px 20px rgba(15, 23, 42, 0.08)",
   };
 
-  async function handleSubmit(e) {
+  // Handle form submission
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!name || !email || !password || !role) {
-      setError("Please fill all fields");
+    
+    if (!name) {
+      setError("Please enter a name");
       return;
     }
 
     try {
-      const secondaryApp = initializeApp(firebaseConfig, "Secondary");
-      const secondaryAuth = getAuth(secondaryApp);
-
-      const userCredential = await createUserWithEmailAndPassword(
-        secondaryAuth,
-        email,
-        password
-      );
-
-      const uid = userCredential.user.uid;
-
-      await set(ref(db, "users/" + uid), {
-        name,
-        email,
-        role,
-        createdAt: Date.now(),
+      // Update only the name in Firebase
+      const userRef = ref(db, `users/${user.uid}`);
+      await update(userRef, {
+        name: name,
       });
 
-      await deleteApp(secondaryApp);
-
-      setName("");
-      setEmail("");
-      setPassword("");
-      setRole("");
+      setSuccess("User updated successfully!");
       setError("");
-
-      onSuccess?.();
-    } catch (error) {
-      setError(error?.message || "Failed to create user");
+      
+      // Close the modal after a short delay
+      setTimeout(() => {
+        onSuccess();
+      }, 1000);
+    } catch (err) {
+      setError("Failed to update user");
+      console.error("Error updating user:", err);
     }
-  }
+  };
 
   return (
     <div
@@ -110,7 +95,7 @@ function CreateUserForm({ onSuccess } = {}) {
             letterSpacing: "-0.02em",
           }}
         >
-          Create New User
+          Edit User
         </h2>
         <p
           style={{
@@ -120,7 +105,7 @@ function CreateUserForm({ onSuccess } = {}) {
             textAlign: "center",
           }}
         >
-          Add a new team member
+          Update the details below
         </p>
       </div>
 
@@ -146,6 +131,22 @@ function CreateUserForm({ onSuccess } = {}) {
             }}
           >
             {error}
+          </div>
+        )}
+
+        {success && (
+          <div
+            style={{
+              padding: "0.75rem 1rem",
+              borderRadius: "10px",
+              background: "rgba(16, 185, 129, 0.08)",
+              border: "1px solid rgba(16, 185, 129, 0.2)",
+              color: "#059669",
+              fontSize: "0.9rem",
+              fontWeight: 600,
+            }}
+          >
+            {success}
           </div>
         )}
 
@@ -184,68 +185,65 @@ function CreateUserForm({ onSuccess } = {}) {
           >
             Email Address
           </label>
-          <input
-            type="email"
-            placeholder="Enter email address"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            style={inputStyle}
-            onFocus={(e) => Object.assign(e.target.style, inputFocusStyle)}
-            onBlur={(e) => Object.assign(e.target.style, inputStyle)}
-          />
-        </div>
-
-        <div>
-          <label
-            style={{
-              display: "block",
-              marginBottom: "0.5rem",
-              fontSize: "0.9rem",
-              fontWeight: 600,
-              color: "#374151",
-            }}
-          >
-            Password
-          </label>
-          <input
-            type="password"
-            placeholder="Enter password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            style={inputStyle}
-            onFocus={(e) => Object.assign(e.target.style, inputFocusStyle)}
-            onBlur={(e) => Object.assign(e.target.style, inputStyle)}
-          />
-        </div>
-
-        <div>
-          <label
-            style={{
-              display: "block",
-              marginBottom: "0.5rem",
-              fontSize: "0.9rem",
-              fontWeight: 600,
-              color: "#374151",
-            }}
-          >
-            User Role
-          </label>
-          <select
-            value={role}
-            onChange={(e) => setRole(e.target.value)}
+          <div
             style={{
               ...inputStyle,
-              cursor: "pointer",
+              background: "rgba(243, 244, 246, 0.8)",
+              color: "#6b7280",
+              cursor: "not-allowed",
+              border: "1px solid rgba(209, 213, 219, 0.8)"
             }}
-            onFocus={(e) => Object.assign(e.target.style, inputFocusStyle)}
-            onBlur={(e) => Object.assign(e.target.style, inputStyle)}
           >
-            <option value="" disabled>
-              Select user role
-            </option>
-            <option value="owner">Owner</option>
-            <option value="cashier">Cashier</option>
-          </select>
+            {user.email || "—"}
+          </div>
+          <div style={{ fontSize: "0.8rem", color: "#6b7280", marginTop: "0.25rem" }}>
+            Email cannot be changed here. Users must update their own email through account settings.
+          </div>
+        </div>
+
+        <div>
+          <label
+            style={{
+              display: "block",
+              marginBottom: "0.5rem",
+              fontSize: "0.9rem",
+              fontWeight: 600,
+              color: "#374151",
+            }}
+          >
+            Role
+          </label>
+          <div
+            style={{
+              ...inputStyle,
+              background: "rgba(243, 244, 246, 0.8)",
+              color: "#6b7280",
+              cursor: "not-allowed",
+              border: "1px solid rgba(209, 213, 219, 0.8)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center"
+            }}
+          >
+            <span
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                padding: "0.25rem 0.5rem",
+                borderRadius: "999px",
+                background: user.role === "owner" ? "rgba(59,130,246,0.10)" : "rgba(16,185,129,0.10)",
+                border: user.role === "owner" ? "1px solid rgba(59,130,246,0.25)" : "1px solid rgba(16,185,129,0.25)",
+                color: user.role === "owner" ? "#1d4ed8" : "#047857",
+                fontWeight: 700,
+                fontSize: "0.8rem"
+              }}
+            >
+              {user.role || "No role"}
+            </span>
+          </div>
+          <div style={{ fontSize: "0.8rem", color: "#6b7280", marginTop: "0.25rem" }}>
+            Role changes require administrator privileges and system access review.
+          </div>
         </div>
 
         <button
@@ -262,11 +260,11 @@ function CreateUserForm({ onSuccess } = {}) {
             e.target.style.boxShadow = "0 8px 20px rgba(15, 23, 42, 0.08)";
           }}
         >
-          Create User
+          Update User
         </button>
       </form>
     </div>
   );
-}
+};
 
-export default CreateUserForm
+export default EditUserForm;

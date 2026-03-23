@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Menu, X } from "lucide-react";
+import { Menu, X, BarChart3, Users, Package, ShoppingCart, LogOut } from "lucide-react";
 
 export default function Sidebar({ onLogout }) {
   const [isOpen, setIsOpen] = useState(true);
@@ -8,9 +8,10 @@ export default function Sidebar({ onLogout }) {
   const location = useLocation();
 
   const menuItems = [
-    { name: "Create User", path: "/CreateUser" },
-    { name: "Products", path: "/products" },
-    { name: "POS", path: "/pos" },
+    { name: "Dashboard", path: "/dashboard", icon: BarChart3 },
+    { name: "Users", path: "/users", icon: Users },
+    { name: "Products", path: "/products", icon: Package },
+    { name: "POS", path: "/pos", icon: ShoppingCart },
   ];
 
   return (
@@ -61,16 +62,6 @@ export default function Sidebar({ onLogout }) {
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", minWidth: 0 }}>
-            <div
-              aria-hidden="true"
-              style={{
-                width: 38,
-                height: 38,
-                borderRadius: 12,
-                background: "rgba(15, 23, 42, 0.9)",
-                boxShadow: "0 10px 22px rgba(15, 23, 42, 0.18)",
-              }}
-            />
             {isOpen ? (
               <div style={{ minWidth: 0 }}>
                 <div style={{ fontWeight: 900, color: "#0f172a", letterSpacing: "-0.02em" }}>
@@ -108,6 +99,8 @@ export default function Sidebar({ onLogout }) {
               item.path === "/"
                 ? location.pathname === "/"
                 : location.pathname.startsWith(item.path);
+            
+            const IconComponent = item.icon;
 
             return (
               <button
@@ -129,19 +122,22 @@ export default function Sidebar({ onLogout }) {
                   cursor: "pointer",
                   display: "flex",
                   alignItems: "center",
-                  justifyContent: isOpen ? "space-between" : "center",
+                  justifyContent: isOpen ? "flex-start" : "center",
                   gap: "0.75rem",
                 }}
               >
-                {isOpen ? (
+                <IconComponent 
+                  size={20} 
+                  style={{ 
+                    color: isActive ? "#1d4ed8" : "#64748b",
+                    flexShrink: 0
+                  }} 
+                />
+                {isOpen && (
                   <>
-                    <span style={{ fontWeight: 800, color: "#0f172a" }}>{item.name}</span>
+                    <span style={{ fontWeight: 800, color: "#0f172a", flex: 1 }}>{item.name}</span>
                     <span style={{ color: "#94a3b8", fontWeight: 900 }}>›</span>
                   </>
-                ) : (
-                  <span style={{ color: isActive ? "#1d4ed8" : "#0f172a", fontWeight: 900 }}>
-                    {item.name.slice(0, 1)}
-                  </span>
                 )}
               </button>
             );
@@ -171,11 +167,12 @@ export default function Sidebar({ onLogout }) {
               cursor: "pointer",
               display: "flex",
               alignItems: "center",
-              justifyContent: "center",
-              gap: "0.5rem",
+              justifyContent: isOpen ? "flex-start" : "center",
+              gap: "0.75rem",
             }}
           >
-            {isOpen ? "Sign Out" : "↩"}
+            <LogOut size={20} style={{ flexShrink: 0 }} />
+            {isOpen && "Sign Out"}
           </button>
         </div>
       </div>
