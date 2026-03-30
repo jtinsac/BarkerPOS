@@ -8,6 +8,8 @@ import Header from "../../components/layout/Header.jsx";
 
 // Custom Confirmation Modal Component
 const CheckoutConfirmationModal = ({ cart, total, onConfirm, onCancel, isProcessing }) => {
+  const [paymentMethod, setPaymentMethod] = useState("cash");
+
   return (
     <div
       style={{
@@ -63,6 +65,80 @@ const CheckoutConfirmationModal = ({ cart, total, onConfirm, onCancel, isProcess
 
         {/* Content */}
         <div style={{ padding: "1.5rem" }}>
+          {/* Payment Method Selection */}
+          <div
+            style={{
+              marginBottom: "1.5rem",
+              padding: "1rem",
+              background: "rgba(248, 250, 252, 0.8)",
+              borderRadius: "10px",
+              border: "1px solid rgba(226, 232, 240, 0.8)"
+            }}
+          >
+            <div
+              style={{
+                fontWeight: 600,
+                color: "#0f172a",
+                marginBottom: "0.75rem",
+                fontSize: "0.95rem"
+              }}
+            >
+              Payment Method:
+            </div>
+            
+            <div style={{ display: "flex", gap: "0.75rem" }}>
+              <label
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                  padding: "0.75rem 1rem",
+                  borderRadius: "8px",
+                  border: paymentMethod === "cash" ? "2px solid #059669" : "1px solid rgba(226, 232, 240, 0.8)",
+                  background: paymentMethod === "cash" ? "rgba(16, 185, 129, 0.1)" : "rgba(255,255,255,0.8)",
+                  cursor: "pointer",
+                  transition: "all 150ms ease",
+                  flex: "1"
+                }}
+              >
+                <input
+                  type="radio"
+                  name="paymentMethod"
+                  value="cash"
+                  checked={paymentMethod === "cash"}
+                  onChange={(e) => setPaymentMethod(e.target.value)}
+                  style={{ margin: 0 }}
+                />
+                <span style={{ fontWeight: "600", fontSize: "0.9rem" }}>💵 Cash</span>
+              </label>
+              
+              <label
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                  padding: "0.75rem 1rem",
+                  borderRadius: "8px",
+                  border: paymentMethod === "gcash" ? "2px solid #059669" : "1px solid rgba(226, 232, 240, 0.8)",
+                  background: paymentMethod === "gcash" ? "rgba(16, 185, 129, 0.1)" : "rgba(255,255,255,0.8)",
+                  cursor: "pointer",
+                  transition: "all 150ms ease",
+                  flex: "1"
+                }}
+              >
+                <input
+                  type="radio"
+                  name="paymentMethod"
+                  value="gcash"
+                  checked={paymentMethod === "gcash"}
+                  onChange={(e) => setPaymentMethod(e.target.value)}
+                  style={{ margin: 0 }}
+                />
+                <span style={{ fontWeight: "600", fontSize: "0.9rem" }}>📱 GCash</span>
+              </label>
+            </div>
+          </div>
+
           <div
             style={{
               marginBottom: "1.5rem",
@@ -182,7 +258,7 @@ const CheckoutConfirmationModal = ({ cart, total, onConfirm, onCancel, isProcess
               Cancel
             </button>
             <button
-              onClick={onConfirm}
+              onClick={() => onConfirm(paymentMethod)}
               disabled={isProcessing}
               style={{
                 background: isProcessing 
@@ -320,7 +396,7 @@ const handleCheckout = async () => {
   setShowCheckoutModal(true);
 };
 
-const processCheckout = async () => {
+const processCheckout = async (paymentMethod) => {
   setIsProcessingCheckout(true);
   setShowCheckoutModal(false);
   
@@ -335,6 +411,7 @@ const processCheckout = async () => {
       userId: currentUser.uid,
       userName: userData?.name || "Unknown User",
       total,
+      paymentMethod,
       items: cart.map(item => ({
         productId: item.id,
         name: item.name,
@@ -363,7 +440,7 @@ const processCheckout = async () => {
 
     clearCart();
 
-    setToast({ message: "Transaction completed successfully!", type: "success" });
+    setToast({ message: `Transaction completed successfully via ${paymentMethod === 'cash' ? 'Cash' : 'GCash'}!`, type: "success" });
   
   } catch(error) {
     console.error("Checkout error:", error);
@@ -608,7 +685,7 @@ const processCheckout = async () => {
                 </div>
               </div>
 
-              {/* Products Grid */}
+              {/* Products by Category */}
               <div
                 style={{
                   flex: "1",
@@ -639,162 +716,191 @@ const processCheckout = async () => {
                 ) : (
                   <div
                     style={{
-                      display: "grid",
-                      gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
-                      gridAutoRows: "280px",
-                      gap: "1rem",
                       overflow: "auto",
                       flex: "1",
-                      paddingRight: "0.5rem",
-                      alignContent: "start"
+                      paddingRight: "0.5rem"
                     }}
                   >
-                    {filteredProducts.map((product) => {
-                      return (
-                        <button
-                          key={product.id}
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            addToCart(product);
-                          }}
-                          style={{
-                            display: "flex",
-                            flexDirection: "column",
-                            padding: "0",
-                            borderRadius: "12px",
-                            border: "1px solid rgba(226, 232, 240, 0.8)",
-                            background: "rgba(248, 250, 252, 0.6)",
-                            cursor: "pointer",
-                            transition: "all 150ms ease",
-                            textAlign: "left",
-                            height: "280px",
-                            justifyContent: "flex-start",
-                            overflow: "hidden"
-                          }}
-                        >
-                          {/* Image Container - Fixed Height */}
-                          <div style={{ 
-                            width: "100%", 
-                            height: "140px", 
-                            borderRadius: "12px 12px 0 0",
-                            overflow: "hidden",
-                            background: "rgba(226, 232, 240, 0.3)",
+                    {(() => {
+                      // Group products by category
+                      const productsByCategory = filteredProducts.reduce((acc, product) => {
+                        const category = product.category || 'Uncategorized';
+                        if (!acc[category]) acc[category] = [];
+                        acc[category].push(product);
+                        return acc;
+                      }, {});
+
+                      return Object.entries(productsByCategory).map(([category, products]) => (
+                        <div key={category} style={{ marginBottom: "2rem" }}>
+                          {/* Category Header */}
+                          <div style={{
+                            fontSize: "1.1rem",
+                            fontWeight: "800",
+                            color: "#0f172a",
+                            marginBottom: "1rem",
+                            padding: "0.75rem 1rem",
+                            background: "linear-gradient(90deg, rgba(59,130,246,0.12), rgba(16,185,129,0.08))",
+                            border: "1px solid rgba(226, 232, 240, 0.6)",
+                            borderRadius: "10px",
                             display: "flex",
                             alignItems: "center",
-                            justifyContent: "center",
-                            flexShrink: 0
+                            gap: "0.5rem"
                           }}>
-                            {product.imageUrl ? (
-                              <img
-                                src={product.imageUrl}
-                                alt={product.name}
-                                style={{
-                                  width: "100%",
-                                  height: "100%",
-                                  objectFit: "contain",
-                                  objectPosition: "center",
-                                  padding: "0.25rem"
-                                }}
-                                onError={(e) => {
-                                  e.target.style.display = 'none';
-                                  e.target.parentElement.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; color: #9ca3af; font-size: 2.5rem;">📦</div>';
-                                }}
-                              />
-                            ) : (
-                              <div style={{
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                width: "100%",
-                                height: "100%",
-                                color: "#9ca3af",
-                                fontSize: "2.5rem"
-                              }}>
-                                📦
-                              </div>
-                            )}
+                            <span>{category}</span>
+                            <span style={{
+                              fontSize: "0.8rem",
+                              fontWeight: "600",
+                              color: "#64748b",
+                              background: "rgba(255,255,255,0.7)",
+                              padding: "0.2rem 0.5rem",
+                              borderRadius: "6px"
+                            }}>({products.length})</span>
                           </div>
                           
-                          {/* Content Container */}
-                          <div style={{ 
-                            flex: "1", 
-                            padding: "1rem", 
-                            display: "flex", 
-                            flexDirection: "column",
-                            justifyContent: "space-between",
-                            minHeight: 0
+                          {/* Products Grid for this category */}
+                          <div style={{
+                            display: "grid",
+                            gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+                            gap: "1rem",
+                            marginBottom: "1rem"
                           }}>
-                            {/* Product Info */}
-                            <div style={{ flex: "1", overflow: "hidden" }}>
-                              <div
-                                style={{
-                                  fontSize: "0.95rem",
-                                  fontWeight: "700",
-                                  color: "#0f172a",
-                                  marginBottom: "0.5rem",
-                                  lineHeight: "1.2",
-                                  wordWrap: "break-word",
-                                  overflowWrap: "break-word",
-                                  display: "-webkit-box",
-                                  WebkitLineClamp: 2,
-                                  WebkitBoxOrient: "vertical",
-                                  overflow: "hidden",
-                                  height: "2.4rem"
-                                }}
-                              >
-                                {product.name}
-                              </div>
-                              
-                              <div style={{ display: "flex", flexWrap: "wrap", gap: "0.25rem", alignItems: "flex-start" }}>
-                                {product.category && (
-                                  <div
-                                    style={{
-                                      fontSize: "0.75rem",
-                                      color: "#64748b",
-                                      background: "rgba(226, 232, 240, 0.5)",
-                                      padding: "0.2rem 0.5rem",
-                                      borderRadius: "6px",
-                                      display: "inline-block"
-                                    }}
-                                  >
-                                    {product.category}
-                                  </div>
-                                )}
-                                <div
+                            {products.map((product) => {
+                              return (
+                                <button
+                                  key={product.id}
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    addToCart(product);
+                                  }}
                                   style={{
-                                    fontSize: "0.75rem",
-                                    color: "#047857",
-                                    background: "rgba(16, 185, 129, 0.1)",
-                                    border: "1px solid rgba(16, 185, 129, 0.2)",
-                                    padding: "0.2rem 0.5rem",
-                                    borderRadius: "6px",
-                                    display: "inline-block",
-                                    fontWeight: "600",
-                                    flexShrink: 0
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    padding: "0",
+                                    borderRadius: "12px",
+                                    border: "1px solid rgba(226, 232, 240, 0.8)",
+                                    background: "rgba(248, 250, 252, 0.6)",
+                                    cursor: "pointer",
+                                    transition: "all 150ms ease",
+                                    textAlign: "left",
+                                    height: "280px",
+                                    justifyContent: "flex-start",
+                                    overflow: "hidden"
                                   }}
                                 >
-                                  In Stock
-                                </div>
-                              </div>
-                            </div>
-                            
-                            {/* Price */}
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "0.5rem", flexShrink: 0 }}>
-                              <span
-                                style={{
-                                  fontSize: "1rem",
-                                  fontWeight: "800",
-                                  color: "#059669"
-                                }}
-                              >
-                                ₱{Number(product.price).toLocaleString()}
-                              </span>
-                            </div>
+                                  {/* Image Container - Fixed Height */}
+                                  <div style={{ 
+                                    width: "100%", 
+                                    height: "140px", 
+                                    borderRadius: "12px 12px 0 0",
+                                    overflow: "hidden",
+                                    background: "rgba(226, 232, 240, 0.3)",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    flexShrink: 0
+                                  }}>
+                                    {product.imageUrl ? (
+                                      <img
+                                        src={product.imageUrl}
+                                        alt={product.name}
+                                        style={{
+                                          width: "100%",
+                                          height: "100%",
+                                          objectFit: "contain",
+                                          objectPosition: "center",
+                                          padding: "0.25rem"
+                                        }}
+                                        onError={(e) => {
+                                          e.target.style.display = 'none';
+                                          e.target.parentElement.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; color: #9ca3af; font-size: 2.5rem;">📦</div>';
+                                        }}
+                                      />
+                                    ) : (
+                                      <div style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        width: "100%",
+                                        height: "100%",
+                                        color: "#9ca3af",
+                                        fontSize: "2.5rem"
+                                      }}>
+                                        📦
+                                      </div>
+                                    )}
+                                  </div>
+                                  
+                                  {/* Content Container */}
+                                  <div style={{ 
+                                    flex: "1", 
+                                    padding: "1rem", 
+                                    display: "flex", 
+                                    flexDirection: "column",
+                                    justifyContent: "space-between",
+                                    minHeight: 0
+                                  }}>
+                                    {/* Product Info */}
+                                    <div style={{ flex: "1", overflow: "hidden" }}>
+                                      <div
+                                        style={{
+                                          fontSize: "0.95rem",
+                                          fontWeight: "700",
+                                          color: "#0f172a",
+                                          marginBottom: "0.5rem",
+                                          lineHeight: "1.2",
+                                          wordWrap: "break-word",
+                                          overflowWrap: "break-word",
+                                          display: "-webkit-box",
+                                          WebkitLineClamp: 2,
+                                          WebkitBoxOrient: "vertical",
+                                          overflow: "hidden",
+                                          height: "2.4rem"
+                                        }}
+                                      >
+                                        {product.name}
+                                      </div>
+                                      
+                                      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.25rem", alignItems: "flex-start" }}>
+                                        <div
+                                          style={{
+                                            fontSize: "0.75rem",
+                                            color: "#047857",
+                                            background: "rgba(16, 185, 129, 0.1)",
+                                            border: "1px solid rgba(16, 185, 129, 0.2)",
+                                            padding: "0.2rem 0.5rem",
+                                            borderRadius: "6px",
+                                            display: "inline-block",
+                                            fontWeight: "600",
+                                            flexShrink: 0
+                                          }}
+                                        >
+                                          In Stock
+                                        </div>
+                                      </div>
+                                    </div>
+                                    
+                                    {/* Price */}
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "0.5rem", flexShrink: 0 }}>
+                                      <span
+                                        style={{
+                                          fontSize: "1rem",
+                                          fontWeight: "800",
+                                          color: "#059669"
+                                        }}
+                                      >
+                                        ₱{Number(product.price).toLocaleString()}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </button>
+                              );
+                            })}
                           </div>
-                        </button>
-                      );
-                    })}
+                        </div>
+                      ));
+                    })()
+                    }
                   </div>
                 )}
               </div>
