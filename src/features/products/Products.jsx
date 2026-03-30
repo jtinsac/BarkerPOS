@@ -255,10 +255,11 @@ const Products = () => {
         return (av - bv) * dir;
       }
       
-      if (sort.key === "stock") {
-        const av = Number(a?.stock ?? 0);
-        const bv = Number(b?.stock ?? 0);
-        return (av - bv) * dir;
+      if (sort.key === "stockStatus") {
+        // Sort by stock status: in-stock first, then out-of-stock
+        const av = a?.stockStatus === "in-stock" ? 1 : 0;
+        const bv = b?.stockStatus === "in-stock" ? 1 : 0;
+        return (bv - av) * dir; // Reverse so in-stock comes first when ascending
       }
 
       const av = String(a?.name ?? "").toLowerCase();
@@ -684,9 +685,9 @@ const Products = () => {
                   <th
                     role="button"
                     tabIndex={0}
-                    onClick={() => toggleSort("stock")}
+                    onClick={() => toggleSort("stockStatus")}
                     onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") toggleSort("stock");
+                      if (e.key === "Enter" || e.key === " ") toggleSort("stockStatus");
                     }}
                     style={{
                       textAlign: "right",
@@ -702,7 +703,7 @@ const Products = () => {
                     }}
                   >
                     <span style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}>
-                      Stock <span style={{ color: "#64748b", fontWeight: 900 }}>{sortLabel("stock")}</span>
+                      Status <span style={{ color: "#64748b", fontWeight: 900 }}>{sortLabel("stockStatus")}</span>
                     </span>
                   </th>
                   <th
@@ -783,24 +784,27 @@ const Products = () => {
                         fontSize: "0.95rem",
                         textAlign: "right",
                         whiteSpace: "nowrap",
-                        fontVariantNumeric: "tabular-nums",
                       }}
                     >
-                      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.15rem" }}>
-                        <span style={{
-                          fontWeight: "700",
-                          color: product.stock > 0 ? "#0f172a" : "#dc2626"
-                        }}>
-                          {Number(product.stock ?? 0).toLocaleString()}
-                        </span>
-                        <span style={{
-                          fontSize: "0.8rem",
-                          color: product.stock > 0 ? "#059669" : "#dc2626",
-                          fontWeight: "600"
-                        }}>
-                          {product.stock > 0 ? "In Stock" : "Out of Stock"}
-                        </span>
-                      </div>
+                      <span
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          padding: "0.35rem 0.7rem",
+                          borderRadius: "999px",
+                          background: product.stockStatus === "in-stock" 
+                            ? "rgba(16,185,129,0.10)" 
+                            : "rgba(239,68,68,0.10)",
+                          border: product.stockStatus === "in-stock" 
+                            ? "1px solid rgba(16,185,129,0.25)" 
+                            : "1px solid rgba(239,68,68,0.25)",
+                          color: product.stockStatus === "in-stock" ? "#047857" : "#dc2626",
+                          fontWeight: 700,
+                          fontSize: "0.85rem",
+                        }}
+                      >
+                        {product.stockStatus === "in-stock" ? "In Stock" : "Out of Stock"}
+                      </span>
                     </td>
 
                     <td

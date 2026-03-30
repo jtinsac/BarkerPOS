@@ -157,24 +157,33 @@ const ViewProductForm = ({ product, onClose }) => {
               color: "#374151",
             }}
           >
-            Stock Quantity
+            Stock Status
           </label>
           <div style={{
             ...displayStyle,
-            color: product.stock > 0 ? "#0f172a" : "#dc2626",
-            fontWeight: product.stock > 0 ? "500" : "600",
+            color: product.stockStatus === "in-stock" ? "#047857" : "#dc2626",
+            fontWeight: "600",
+            display: "flex",
+            alignItems: "center",
+            gap: "0.5rem"
           }}>
-            {product.stock !== undefined ? product.stock : "—"}
-            {product.stock !== undefined && (
-              <span style={{ 
-                marginLeft: "0.5rem", 
-                fontSize: "0.85rem", 
-                color: product.stock > 0 ? "#059669" : "#dc2626",
-                fontWeight: "600"
-              }}>
-                {product.stock > 0 ? "In Stock" : "Out of Stock"}
-              </span>
-            )}
+            <span
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                padding: "0.25rem 0.6rem",
+                borderRadius: "999px",
+                background: product.stockStatus === "in-stock" 
+                  ? "rgba(16,185,129,0.10)" 
+                  : "rgba(239,68,68,0.10)",
+                border: product.stockStatus === "in-stock" 
+                  ? "1px solid rgba(16,185,129,0.25)" 
+                  : "1px solid rgba(239,68,68,0.25)",
+                fontSize: "0.85rem",
+              }}
+            >
+              {product.stockStatus === "in-stock" ? "In Stock" : "Out of Stock"}
+            </span>
           </div>
         </div>
 

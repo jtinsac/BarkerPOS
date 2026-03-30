@@ -7,7 +7,7 @@ const EditProductForm = ({ product, onSuccess }) => {
   // Initialize form state with the existing product data
   const [name, setName] = useState(product.name || "");
   const [price, setPrice] = useState(product.price || "");
-  const [stock, setStock] = useState(product.stock || "");
+  const [stockStatus, setStockStatus] = useState(product.stockStatus || "in-stock");
   const [category, setCategory] = useState(product.category || "");
   const [imageUrl, setImageUrl] = useState(product.imageUrl || null);
   const [categories, setCategories] = useState([]);
@@ -75,7 +75,7 @@ const EditProductForm = ({ product, onSuccess }) => {
     
     if (isSubmitting) return; // Prevent multiple submissions
     
-    if (!name || !price || !stock || !category) {
+    if (!name || !price || !category) {
       setError("Please fill all fields");
       return;
     }
@@ -90,7 +90,7 @@ const EditProductForm = ({ product, onSuccess }) => {
       await update(productRef, {
         name: name,
         price: Number(price),
-        stock: Number(stock),
+        stockStatus: stockStatus,
         category: category,
         imageUrl: imageUrl || null,
       });
@@ -245,17 +245,21 @@ const EditProductForm = ({ product, onSuccess }) => {
               color: "#374151",
             }}
           >
-            Stock Quantity
+            Stock Status
           </label>
-          <input
-            type="number"
-            placeholder="0"
-            value={stock}
-            onChange={(e) => setStock(e.target.value)}
-            style={inputStyle}
+          <select
+            value={stockStatus}
+            onChange={(e) => setStockStatus(e.target.value)}
+            style={{
+              ...inputStyle,
+              cursor: "pointer",
+            }}
             onFocus={(e) => Object.assign(e.target.style, inputFocusStyle)}
             onBlur={(e) => Object.assign(e.target.style, inputStyle)}
-          />
+          >
+            <option value="in-stock">In Stock</option>
+            <option value="out-of-stock">Out of Stock</option>
+          </select>
         </div>
 
         <div>

@@ -406,11 +406,12 @@ const processCheckout = async () => {
   // Get unique categories from products
   const categories = [...new Set(products.map(p => p.category).filter(Boolean))];
 
-  // Filter products based on search and category (include out of stock items)
+  // Filter products based on search and category (only show in-stock items)
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name?.toLowerCase().includes(searchQuery.toLowerCase()) || false;
     const matchesCategory = selectedCategory === "all" || product.category === selectedCategory;
-    return matchesSearch && matchesCategory;
+    const isInStock = product.stockStatus === "in-stock";
+    return matchesSearch && matchesCategory && isInStock;
   });
 
   const addToCart = (product) => {
@@ -649,34 +650,26 @@ const processCheckout = async () => {
                     }}
                   >
                     {filteredProducts.map((product) => {
-                      const stockValue = Number(product.stock) || 0;
-                      const isOutOfStock = stockValue <= 0;
-                      
                       return (
                         <button
                           key={product.id}
                           type="button"
                           onClick={(e) => {
                             e.preventDefault();
-                            if (!isOutOfStock) {
-                              addToCart(product);
-                            }
+                            addToCart(product);
                           }}
-                          disabled={isOutOfStock}
                           style={{
                             display: "flex",
                             flexDirection: "column",
                             padding: "0",
                             borderRadius: "12px",
-                            border: `1px solid ${isOutOfStock ? "rgba(156, 163, 175, 0.4)" : "rgba(226, 232, 240, 0.8)"}`,
-                            background: isOutOfStock ? "rgba(243, 244, 246, 0.6)" : "rgba(248, 250, 252, 0.6)",
-                            cursor: isOutOfStock ? "not-allowed" : "pointer",
+                            border: "1px solid rgba(226, 232, 240, 0.8)",
+                            background: "rgba(248, 250, 252, 0.6)",
+                            cursor: "pointer",
                             transition: "all 150ms ease",
                             textAlign: "left",
                             height: "280px",
                             justifyContent: "flex-start",
-                            opacity: isOutOfStock ? 0.6 : 1,
-                            pointerEvents: isOutOfStock ? "none" : "auto",
                             overflow: "hidden"
                           }}
                         >
@@ -701,7 +694,6 @@ const processCheckout = async () => {
                                   height: "100%",
                                   objectFit: "contain",
                                   objectPosition: "center",
-                                  opacity: isOutOfStock ? 0.5 : 1,
                                   padding: "0.25rem"
                                 }}
                                 onError={(e) => {
@@ -739,7 +731,7 @@ const processCheckout = async () => {
                                 style={{
                                   fontSize: "0.95rem",
                                   fontWeight: "700",
-                                  color: isOutOfStock ? "#9ca3af" : "#0f172a",
+                                  color: "#0f172a",
                                   marginBottom: "0.5rem",
                                   lineHeight: "1.2",
                                   wordWrap: "break-word",
@@ -759,8 +751,8 @@ const processCheckout = async () => {
                                   <div
                                     style={{
                                       fontSize: "0.75rem",
-                                      color: isOutOfStock ? "#9ca3af" : "#64748b",
-                                      background: isOutOfStock ? "rgba(156, 163, 175, 0.3)" : "rgba(226, 232, 240, 0.5)",
+                                      color: "#64748b",
+                                      background: "rgba(226, 232, 240, 0.5)",
                                       padding: "0.2rem 0.5rem",
                                       borderRadius: "6px",
                                       display: "inline-block"
@@ -769,45 +761,34 @@ const processCheckout = async () => {
                                     {product.category}
                                   </div>
                                 )}
-                                {isOutOfStock && (
-                                  <div
-                                    style={{
-                                      fontSize: "0.75rem",
-                                      color: "#dc2626",
-                                      background: "rgba(239, 68, 68, 0.1)",
-                                      border: "1px solid rgba(239, 68, 68, 0.2)",
-                                      padding: "0.2rem 0.5rem",
-                                      borderRadius: "6px",
-                                      display: "inline-block",
-                                      fontWeight: "600",
-                                      flexShrink: 0
-                                    }}
-                                  >
-                                    Out of Stock
-                                  </div>
-                                )}
+                                <div
+                                  style={{
+                                    fontSize: "0.75rem",
+                                    color: "#047857",
+                                    background: "rgba(16, 185, 129, 0.1)",
+                                    border: "1px solid rgba(16, 185, 129, 0.2)",
+                                    padding: "0.2rem 0.5rem",
+                                    borderRadius: "6px",
+                                    display: "inline-block",
+                                    fontWeight: "600",
+                                    flexShrink: 0
+                                  }}
+                                >
+                                  In Stock
+                                </div>
                               </div>
                             </div>
                             
-                            {/* Price and Stock */}
+                            {/* Price */}
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "0.5rem", flexShrink: 0 }}>
                               <span
                                 style={{
                                   fontSize: "1rem",
                                   fontWeight: "800",
-                                  color: isOutOfStock ? "#9ca3af" : "#059669"
+                                  color: "#059669"
                                 }}
                               >
                                 ₱{Number(product.price).toLocaleString()}
-                              </span>
-                              <span
-                                style={{
-                                  fontSize: "0.8rem",
-                                  color: isOutOfStock ? "#dc2626" : "#64748b",
-                                  fontWeight: "500"
-                                }}
-                              >
-                                Stock: {stockValue}
                               </span>
                             </div>
                           </div>

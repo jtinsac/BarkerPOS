@@ -6,7 +6,7 @@ import ImageUpload from "../../components/ImageUpload";
 export default function CreateProductForm({ onSuccess } = {}) {
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
-  const [stock, setStock] = useState("");
+  const [stockStatus, setStockStatus] = useState("in-stock");
   const [category, setCategory] = useState("");
   const [newCategory, setNewCategory] = useState("");
   const [imageUrl, setImageUrl] = useState(null);
@@ -74,7 +74,7 @@ export default function CreateProductForm({ onSuccess } = {}) {
 
     if (isSubmitting) return; // Prevent multiple submissions
 
-    if (!name || !price || !stock || (!category && !newCategory)) {
+    if (!name || !price || (!category && !newCategory)) {
       setError("Please fill all fields and select or add a category");
       return;
     }
@@ -90,7 +90,7 @@ export default function CreateProductForm({ onSuccess } = {}) {
       await set(newProductRef, {
         name: name,
         price: Number(price),
-        stock: Number(stock),
+        stockStatus: stockStatus,
         category: finalCategory,
         imageUrl: imageUrl || null,
       });
@@ -98,7 +98,7 @@ export default function CreateProductForm({ onSuccess } = {}) {
       setSuccess("Product added successfully!");
       setName("");
       setPrice("");
-      setStock("");
+      setStockStatus("in-stock");
       setCategory("");
       setNewCategory("");
       setImageUrl(null);
@@ -247,17 +247,21 @@ export default function CreateProductForm({ onSuccess } = {}) {
               color: "#374151",
             }}
           >
-            Stock Quantity
+            Stock Status
           </label>
-          <input
-            type="number"
-            placeholder="0"
-            value={stock}
-            onChange={(e) => setStock(e.target.value)}
-            style={inputStyle}
+          <select
+            value={stockStatus}
+            onChange={(e) => setStockStatus(e.target.value)}
+            style={{
+              ...inputStyle,
+              cursor: "pointer",
+            }}
             onFocus={(e) => Object.assign(e.target.style, inputFocusStyle)}
             onBlur={(e) => Object.assign(e.target.style, inputStyle)}
-          />
+          >
+            <option value="in-stock">In Stock</option>
+            <option value="out-of-stock">Out of Stock</option>
+          </select>
         </div>
 
         <div>
