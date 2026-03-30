@@ -13,7 +13,7 @@ import Transactions from "./features/transactions/Transactions";
 
 function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename="/BarkerPOS">
       <Routes>
         <Route path="/" element={<Login />} />
         <Route path="/login" element={<Login />} />
