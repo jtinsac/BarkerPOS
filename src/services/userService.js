@@ -1,25 +1,44 @@
-// Frontend service to call backend API for user deletion
-import { auth } from "../lib/firebase";
+// Frontend-only user service using Firebase client SDK
+import { auth, db } from "../lib/firebase";
+import { deleteUser } from "firebase/auth";
+import { ref, remove, set } from "firebase/database";
 
-export const deleteUserFromSystem = async (uid) => {
+// Note: Deleting other users requires admin privileges
+// This function can only delete the currently authenticated user
+export const deleteCurrentUser = async () => {
   try {
-    const response = await fetch('http://localhost:3001/api/users/delete', {
-      method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${await auth.currentUser?.getIdToken()}`
-      },
-      body: JSON.stringify({ uid })
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Failed to delete user');
+    const user = auth.currentUser;
+    if (!user) {
+      throw new Error('No user is currently signed in');
     }
 
-    return await response.json();
+    // Delete user data from database first
+    const userRef = ref(db, `users/${user.uid}`);
+    await remove(userRef);
+
+    // Delete the user account (only works for current user)
+    await deleteUser(user);
+
+    return { success: true, message: 'User deleted successfully' };
   } catch (error) {
     console.error('Error deleting user:', error);
+    throw error;
+  }
+};
+
+// Alternative: Disable user instead of deleting (recommended approach)
+export const disableUser = async (uid, userData = {}) => {
+  try {
+    const userRef = ref(db, `users/${uid}`);
+    await set(userRef, {
+      ...userData,
+      disabled: true,
+      disabledAt: Date.now()
+    });
+    
+    return { success: true, message: 'User disabled successfully' };
+  } catch (error) {
+    console.error('Error disabling user:', error);
     throw error;
   }
 };
