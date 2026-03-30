@@ -37,7 +37,9 @@ const CheckoutConfirmationModal = ({ cart, total, onConfirm, onCancel, isProcess
           boxShadow: "0 25px 50px rgba(0, 0, 0, 0.3)",
           maxWidth: "500px",
           width: "90%",
-          maxHeight: "80vh",
+          maxHeight: "85vh",
+          display: "flex",
+          flexDirection: "column",
           overflow: "hidden",
           fontFamily: 'system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif'
         }}
@@ -64,7 +66,13 @@ const CheckoutConfirmationModal = ({ cart, total, onConfirm, onCancel, isProcess
         </div>
 
         {/* Content */}
-        <div style={{ padding: "1.5rem" }}>
+        <div style={{ 
+          padding: "1.5rem", 
+          flex: "1",
+          overflow: "auto",
+          display: "flex",
+          flexDirection: "column"
+        }}>
           {/* Payment Method Selection */}
           <div
             style={{
@@ -159,7 +167,7 @@ const CheckoutConfirmationModal = ({ cart, total, onConfirm, onCancel, isProcess
               Order Summary:
             </div>
             
-            <div style={{ maxHeight: "200px", overflowY: "auto" }}>
+            <div style={{ maxHeight: "150px", overflowY: "auto" }}>
               {cart.map((item, index) => (
                 <div
                   key={index}
@@ -217,7 +225,7 @@ const CheckoutConfirmationModal = ({ cart, total, onConfirm, onCancel, isProcess
               color: "#64748b",
               fontSize: "0.9rem",
               textAlign: "center",
-              marginBottom: "1.5rem"
+              margin: "1rem 0"
             }}
           >
             Are you sure you want to process this transaction?
@@ -228,7 +236,11 @@ const CheckoutConfirmationModal = ({ cart, total, onConfirm, onCancel, isProcess
             style={{
               display: "flex",
               gap: "0.75rem",
-              justifyContent: "flex-end"
+              justifyContent: "flex-end",
+              marginTop: "auto",
+              paddingTop: "1rem",
+              borderTop: "1px solid rgba(226, 232, 240, 0.6)",
+              flexShrink: 0
             }}
           >
             <button
