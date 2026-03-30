@@ -12,6 +12,7 @@ const Transactions = () => {
   const { user } = useContext(UserContext);
   const [transactions, setTransactions] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [dateFilter, setDateFilter] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [sortBy, setSortBy] = useState("newest");
   const [expandedRows, setExpandedRows] = useState(new Set());
@@ -58,7 +59,11 @@ const Transactions = () => {
         transaction.items?.some(item => 
           item.name?.toLowerCase().includes(searchQuery.toLowerCase())
         );
-      return matchesSearch;
+      
+      const matchesDate = !dateFilter || 
+        new Date(transaction.createdAt).toDateString() === new Date(dateFilter).toDateString();
+      
+      return matchesSearch && matchesDate;
     })
     .sort((a, b) => {
       switch (sortBy) {
@@ -102,8 +107,13 @@ const Transactions = () => {
     });
   };
 
-  const calculateTotalRevenue = () => {
-    return filteredTransactions.reduce((sum, transaction) => sum + transaction.total, 0);
+  const calculateTodayRevenue = () => {
+    const today = new Date();
+    const todayTransactions = transactions.filter(transaction => {
+      const transactionDate = new Date(transaction.createdAt);
+      return transactionDate.toDateString() === today.toDateString();
+    });
+    return todayTransactions.reduce((sum, transaction) => sum + transaction.total, 0);
   };
 
   return (
@@ -171,7 +181,7 @@ const Transactions = () => {
                     fontWeight: 900,
                   }}
                 >
-                  ₱{calculateTotalRevenue().toLocaleString()} Revenue
+                  ₱{calculateTodayRevenue().toLocaleString()} Today
                 </div>
               </div>
             </div>
@@ -221,6 +231,26 @@ const Transactions = () => {
                       }}
                     />
                   </div>
+
+                  <input
+                    type="date"
+                    value={dateFilter}
+                    onChange={(e) => {
+                      setDateFilter(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    style={{
+                      padding: "0.65rem 0.8rem",
+                      borderRadius: "10px",
+                      border: "1px solid rgba(226, 232, 240, 0.9)",
+                      background: "rgba(255,255,255,0.9)",
+                      fontSize: "0.95rem",
+                      color: "#0f172a",
+                      outline: "none",
+                      cursor: "pointer",
+                      minWidth: "150px"
+                    }}
+                  />
 
                   <select
                     value={sortBy}
@@ -280,6 +310,9 @@ const Transactions = () => {
                             CASHIER
                           </th>
                           <th style={{ padding: "1rem", textAlign: "left", fontSize: "0.85rem", fontWeight: "700", color: "#374151", letterSpacing: "0.05em" }}>
+                            PAYMENT METHOD
+                          </th>
+                          <th style={{ padding: "1rem", textAlign: "left", fontSize: "0.85rem", fontWeight: "700", color: "#374151", letterSpacing: "0.05em" }}>
                             ITEMS
                           </th>
                           <th style={{ padding: "1rem", textAlign: "right", fontSize: "0.85rem", fontWeight: "700", color: "#374151", letterSpacing: "0.05em" }}>
@@ -336,6 +369,33 @@ const Transactions = () => {
                                   </div>
                                 </td>
                                 <td style={{ padding: "1rem" }}>
+                                  <div style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "0.5rem",
+                                    padding: "0.4rem 0.75rem",
+                                    borderRadius: "8px",
+                                    fontSize: "0.85rem",
+                                    fontWeight: "600",
+                                    background: transaction.paymentMethod === "gcash" 
+                                      ? "rgba(59, 130, 246, 0.1)" 
+                                      : "rgba(34, 197, 94, 0.1)",
+                                    border: transaction.paymentMethod === "gcash" 
+                                      ? "1px solid rgba(59, 130, 246, 0.2)" 
+                                      : "1px solid rgba(34, 197, 94, 0.2)",
+                                    color: transaction.paymentMethod === "gcash" 
+                                      ? "#1d4ed8" 
+                                      : "#047857"
+                                  }}>
+                                    <span>
+                                      {transaction.paymentMethod === "gcash" ? "📱" : "💵"}
+                                    </span>
+                                    <span>
+                                      {transaction.paymentMethod === "gcash" ? "GCash" : "Cash"}
+                                    </span>
+                                  </div>
+                                </td>
+                                <td style={{ padding: "1rem" }}>
                                   <div style={{ fontSize: "0.85rem", color: "#64748b" }}>
                                     {transaction.items?.length || 0} item{(transaction.items?.length || 0) !== 1 ? 's' : ''}
                                   </div>
@@ -357,7 +417,7 @@ const Transactions = () => {
                                   borderBottom: "1px solid rgba(226, 232, 240, 0.6)",
                                   background: index % 2 === 0 ? "rgba(248, 250, 252, 0.3)" : "transparent"
                                 }}>
-                                  <td colSpan="5" style={{ padding: "0 1rem 1rem 1rem" }}>
+                                  <td colSpan="6" style={{ padding: "0 1rem 1rem 1rem" }}>
                                     <div style={{
                                       background: "rgba(255, 255, 255, 0.8)",
                                       border: "1px solid rgba(226, 232, 240, 0.6)",
