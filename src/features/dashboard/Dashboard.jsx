@@ -60,6 +60,15 @@ export default function Dashboard() {
 
   // Filter transactions by selected period
   const getFilteredTransactions = (period) => {
+    if (period === 'today') {
+      const today = new Date();
+      const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+      const endOfDay = startOfDay + 24 * 60 * 60 * 1000;
+      return transactions.filter(
+        transaction => transaction.createdAt >= startOfDay && transaction.createdAt < endOfDay
+      );
+    }
+    
     const { startDate, endDate } = getDateRange(period);
     return transactions.filter(
       transaction => transaction.createdAt >= startDate && transaction.createdAt <= endDate
@@ -232,9 +241,7 @@ export default function Dashboard() {
     setRevenueByCategory(sortedCategories);
 
     // Calculate sales and transactions for selected period
-    const selectedPeriodTransactions = selectedPeriod === 'today' 
-      ? todayTransactions 
-      : getFilteredTransactions(selectedPeriod);
+    const selectedPeriodTransactions = getFilteredTransactions(selectedPeriod);
     
     const selectedPeriodSales = selectedPeriodTransactions.reduce((sum, transaction) => sum + (transaction.total || 0), 0);
     setPeriodSales(selectedPeriodSales);
