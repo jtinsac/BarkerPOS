@@ -531,11 +531,6 @@ const processCheckout = async (paymentMethod) => {
       return;
     }
     
-    // Auto-show cart when adding first item
-    if (cart.length === 0) {
-      setShowCart(true);
-    }
-    
     setCart(prevCart => {
       const existingItem = prevCart.find(item => item.id === product.id);
       if (existingItem) {

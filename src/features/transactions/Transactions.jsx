@@ -31,15 +31,11 @@ const Transactions = () => {
 
   useEffect(() => {
     const transactionsRef = ref(db, "transactions");
-    console.log("Setting up transactions listener...");
 
     const unsubscribe = onValue(transactionsRef, (snapshot) => {
-      console.log("Transactions snapshot received:", snapshot.exists());
       const data = snapshot.val();
-      console.log("Raw transactions data:", data);
 
       if (!data) {
-        console.log("No transactions data found");
         setTransactions([]);
         return;
       }
@@ -49,15 +45,12 @@ const Transactions = () => {
         ...value,
       }));
 
-      console.log("Processed transactions array:", transactionsArray);
-      console.log("Number of transactions:", transactionsArray.length);
       setTransactions(transactionsArray);
     }, (error) => {
       console.error("Error listening to transactions:", error);
     });
 
     return () => {
-      console.log("Cleaning up transactions listener");
       unsubscribe();
     };
   }, []);
@@ -117,15 +110,15 @@ const Transactions = () => {
     .sort((a, b) => {
       switch (sortBy) {
         case "newest":
-          return b.createdAt - a.createdAt;
+          return Number(b.createdAt) - Number(a.createdAt);
         case "oldest":
-          return a.createdAt - b.createdAt;
+          return Number(a.createdAt) - Number(b.createdAt);
         case "highest":
-          return b.total - a.total;
+          return Number(b.total) - Number(a.total);
         case "lowest":
-          return a.total - b.total;
+          return Number(a.total) - Number(b.total);
         default:
-          return b.createdAt - a.createdAt;
+          return Number(b.createdAt) - Number(a.createdAt);
       }
     });
 

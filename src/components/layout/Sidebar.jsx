@@ -66,9 +66,9 @@ export default function Sidebar({ onLogout }) {
             {isOpen ? (
               <div style={{ minWidth: 0 }}>
                 <div style={{ fontWeight: 900, color: "#0f172a", letterSpacing: "-0.02em" }}>
-                  Barker Admin
+                  Ram's Blend Admin
                 </div>
-                <div style={{ fontSize: "0.85rem", color: "#475569" }}>Pet Supply Dashboard</div>
+                <div style={{ fontSize: "0.85rem", color: "#475569" }}>Ram's Blend Dashboard</div>
               </div>
             ) : null}
           </div>
