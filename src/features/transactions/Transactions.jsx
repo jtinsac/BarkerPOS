@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useContext } from "react";
+import { useLocation } from "react-router-dom";
 import { ref, onValue } from "firebase/database";
 import { db } from "../../lib/firebase";
 import MainLayout from "../../components/layout/MainLayout.jsx";
@@ -10,9 +11,11 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 
 const Transactions = () => {
   const { user } = useContext(UserContext);
+  const location = useLocation();
   const [transactions, setTransactions] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [dateFilter, setDateFilter] = useState("");
+  const [periodFilter, setPeriodFilter] = useState(location.state?.filterPeriod || "");
   const [currentPage, setCurrentPage] = useState(1);
   const [sortBy, setSortBy] = useState("newest");
   const [expandedRows, setExpandedRows] = useState(new Set());
@@ -28,11 +31,15 @@ const Transactions = () => {
 
   useEffect(() => {
     const transactionsRef = ref(db, "transactions");
+    console.log("Setting up transactions listener...");
 
     const unsubscribe = onValue(transactionsRef, (snapshot) => {
+      console.log("Transactions snapshot received:", snapshot.exists());
       const data = snapshot.val();
+      console.log("Raw transactions data:", data);
 
       if (!data) {
+        console.log("No transactions data found");
         setTransactions([]);
         return;
       }
@@ -42,13 +49,46 @@ const Transactions = () => {
         ...value,
       }));
 
+      console.log("Processed transactions array:", transactionsArray);
+      console.log("Number of transactions:", transactionsArray.length);
       setTransactions(transactionsArray);
+    }, (error) => {
+      console.error("Error listening to transactions:", error);
     });
 
     return () => {
+      console.log("Cleaning up transactions listener");
       unsubscribe();
     };
   }, []);
+
+  // Helper function to get date range based on period
+  const getDateRange = (period) => {
+    const now = new Date();
+    const startDate = new Date();
+    
+    switch (period) {
+      case 'today':
+        startDate.setHours(0, 0, 0, 0);
+        return { startDate: startDate.getTime(), endDate: now.getTime() };
+      case 'week':
+        startDate.setDate(now.getDate() - 7);
+        break;
+      case 'month':
+        startDate.setMonth(now.getMonth() - 1);
+        break;
+      case '3months':
+        startDate.setMonth(now.getMonth() - 3);
+        break;
+      case '6months':
+        startDate.setMonth(now.getMonth() - 6);
+        break;
+      default:
+        return null;
+    }
+    
+    return { startDate: startDate.getTime(), endDate: now.getTime() };
+  };
 
   // Filter and sort transactions
   const filteredTransactions = transactions
@@ -63,7 +103,16 @@ const Transactions = () => {
       const matchesDate = !dateFilter || 
         new Date(transaction.createdAt).toDateString() === new Date(dateFilter).toDateString();
       
-      return matchesSearch && matchesDate;
+      // Apply period filter if set
+      let matchesPeriod = true;
+      if (periodFilter) {
+        const dateRange = getDateRange(periodFilter);
+        if (dateRange) {
+          matchesPeriod = transaction.createdAt >= dateRange.startDate && transaction.createdAt <= dateRange.endDate;
+        }
+      }
+      
+      return matchesSearch && matchesDate && matchesPeriod;
     })
     .sort((a, b) => {
       switch (sortBy) {
@@ -209,6 +258,42 @@ const Transactions = () => {
                 }}
               >
                 <div style={{ display: "flex", gap: "1rem", alignItems: "center", flexWrap: "wrap" }}>
+                  {/* Period Filter */}
+                  {periodFilter && (
+                    <div style={{
+                      padding: "0.65rem 0.8rem",
+                      borderRadius: "10px",
+                      border: "1px solid rgba(59,130,246,0.5)",
+                      background: "rgba(59,130,246,0.15)",
+                      color: "#1d4ed8",
+                      fontSize: "0.85rem",
+                      fontWeight: "700",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.5rem"
+                    }}>
+                      <span>Filtered by: {periodFilter === '3months' ? '3 Months' : periodFilter === '6months' ? '6 Months' : periodFilter.charAt(0).toUpperCase() + periodFilter.slice(1)}</span>
+                      <button
+                        onClick={() => {
+                          setPeriodFilter("");
+                          setCurrentPage(1);
+                        }}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          color: "#1d4ed8",
+                          cursor: "pointer",
+                          fontSize: "1rem",
+                          padding: "0",
+                          display: "flex",
+                          alignItems: "center"
+                        }}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  )}
+                  
                   <div style={{ flex: "1", minWidth: "250px" }}>
                     <input
                       type="search"

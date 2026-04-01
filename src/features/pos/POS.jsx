@@ -5,6 +5,7 @@ import { signOut } from "firebase/auth";
 import { UserContext } from "../../context/UserContext.jsx";
 import MainLayout from "../../components/layout/MainLayout.jsx";
 import Header from "../../components/layout/Header.jsx";
+import { ShoppingCart, X } from "lucide-react";
 
 // Custom Confirmation Modal Component
 const CheckoutConfirmationModal = ({ cart, total, onConfirm, onCancel, isProcessing }) => {
@@ -236,7 +237,7 @@ const CheckoutConfirmationModal = ({ cart, total, onConfirm, onCancel, isProcess
             style={{
               display: "flex",
               gap: "0.75rem",
-              justifyContent: "flex-end",
+              justifyContent: "center",
               marginTop: "auto",
               paddingTop: "1rem",
               borderTop: "1px solid rgba(226, 232, 240, 0.6)",
@@ -267,7 +268,7 @@ const CheckoutConfirmationModal = ({ cart, total, onConfirm, onCancel, isProcess
                 e.target.style.transform = "translateY(0)";
               }}
             >
-              Cancel
+              Back
             </button>
             <button
               onClick={() => onConfirm(paymentMethod)}
@@ -302,7 +303,7 @@ const CheckoutConfirmationModal = ({ cart, total, onConfirm, onCancel, isProcess
                 }
               }}
             >
-              {isProcessing ? "Processing..." : "Process Transaction"}
+              {isProcessing ? "Processing..." : "Place Order"}
             </button>
           </div>
         </div>
@@ -394,6 +395,7 @@ const POS = () => {
   const [toast, setToast] = useState(null);
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
   const [isProcessingCheckout, setIsProcessingCheckout] = useState(false);
+  const [showCart, setShowCart] = useState(false);
 
   async function handleLogout() {
     try {
@@ -414,8 +416,18 @@ const processCheckout = async (paymentMethod) => {
   
   try {
     const currentUser = auth.currentUser;
+    console.log("Current user:", currentUser);
+    console.log("Cart items:", cart);
+    console.log("Total:", total);
+    console.log("Payment method:", paymentMethod);
+    console.log("User data:", userData);
+
+    if (!currentUser) {
+      throw new Error("No authenticated user found");
+    }
 
     const transactionRef = ref(db, "transactions");
+    console.log("Transaction ref created:", transactionRef);
 
     // Create transaction object
     const newTransaction = {
@@ -432,7 +444,10 @@ const processCheckout = async (paymentMethod) => {
       }))
     };
 
-    await push(transactionRef, newTransaction);
+    console.log("New transaction object:", newTransaction);
+
+    const result = await push(transactionRef, newTransaction);
+    console.log("Transaction saved with key:", result.key);
 
     const updates = {};
 
@@ -448,15 +463,23 @@ const processCheckout = async (paymentMethod) => {
       }
     }
 
-    await update(ref(db), updates);
+    console.log("Stock updates:", updates);
+
+    if (Object.keys(updates).length > 0) {
+      await update(ref(db), updates);
+      console.log("Stock updated successfully");
+    }
 
     clearCart();
 
     setToast({ message: `Transaction completed successfully via ${paymentMethod === 'cash' ? 'Cash' : 'GCash'}!`, type: "success" });
+    console.log("Checkout completed successfully");
   
   } catch(error) {
-    console.error("Checkout error:", error);
-    setToast({ message: "Checkout failed. Please try again.", type: "error" });
+    console.error("Checkout error details:", error);
+    console.error("Error message:", error.message);
+    console.error("Error stack:", error.stack);
+    setToast({ message: `Checkout failed: ${error.message}`, type: "error" });
   } finally {
     setIsProcessingCheckout(false);
   }
@@ -495,15 +518,24 @@ const processCheckout = async (paymentMethod) => {
   // Get unique categories from products
   const categories = [...new Set(products.map(p => p.category).filter(Boolean))];
 
-  // Filter products based on search and category (only show in-stock items)
+  // Filter products based on search and category (show all products, including out-of-stock)
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name?.toLowerCase().includes(searchQuery.toLowerCase()) || false;
     const matchesCategory = selectedCategory === "all" || product.category === selectedCategory;
-    const isInStock = product.stockStatus === "in-stock";
-    return matchesSearch && matchesCategory && isInStock;
+    return matchesSearch && matchesCategory;
   });
 
   const addToCart = (product) => {
+    // Don't add out-of-stock products to cart
+    if (product.stockStatus !== "in-stock") {
+      return;
+    }
+    
+    // Auto-show cart when adding first item
+    if (cart.length === 0) {
+      setShowCart(true);
+    }
+    
     setCart(prevCart => {
       const existingItem = prevCart.find(item => item.id === product.id);
       if (existingItem) {
@@ -592,18 +624,47 @@ const processCheckout = async (paymentMethod) => {
             >
               {filteredProducts.length} Products
             </div>
-            <div
+            <button
+              onClick={() => setShowCart(!showCart)}
               style={{
-                padding: "0.6rem 0.85rem",
-                borderRadius: "14px",
-                border: "1px solid rgba(16,185,129,0.35)",
-                background: "rgba(16,185,129,0.10)",
-                color: "#047857",
-                fontWeight: 900,
+                padding: "0.75rem 1rem",
+                borderRadius: "12px",
+                border: "1px solid rgba(226, 232, 240, 0.8)",
+                background: "rgba(255, 255, 255, 0.95)",
+                color: cart.length > 0 ? "#047857" : "#6b7280",
+                fontWeight: 700,
+                cursor: "pointer",
+                transition: "all 150ms ease",
+                display: "flex",
+                alignItems: "center",
+                gap: "0.5rem",
+                boxShadow: "0 2px 8px rgba(15, 23, 42, 0.08)"
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.transform = "translateY(-1px)";
+                e.target.style.boxShadow = "0 4px 12px rgba(15, 23, 42, 0.12)";
+                e.target.style.background = "rgba(255, 255, 255, 1)";
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.transform = "translateY(0)";
+                e.target.style.boxShadow = "0 2px 8px rgba(15, 23, 42, 0.08)";
+                e.target.style.background = "rgba(255, 255, 255, 0.95)";
               }}
             >
-              Cart ({cart.length})
-            </div>
+              <ShoppingCart size={16} />
+              Cart ({cart.reduce((total, item) => total + item.quantity, 0)})
+              {cart.length > 0 && (
+                <span style={{
+                  fontSize: "0.7rem",
+                  background: "rgba(16,185,129,0.2)",
+                  padding: "0.1rem 0.4rem",
+                  borderRadius: "8px",
+                  marginLeft: "0.25rem"
+                }}>
+                  ₱{total.toLocaleString()}
+                </span>
+              )}
+            </button>
           </div>
         </div>
 
@@ -625,11 +686,12 @@ const processCheckout = async (paymentMethod) => {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "1fr 400px",
+              gridTemplateColumns: showCart ? "1fr 400px" : "1fr",
               gap: "1.5rem",
               flex: "1",
               overflow: "hidden",
-              minHeight: 0
+              minHeight: 0,
+              transition: "grid-template-columns 300ms ease"
             }}
           >
             {/* LEFT SIDE - Products */}
@@ -777,27 +839,50 @@ const processCheckout = async (paymentMethod) => {
                             marginBottom: "1rem"
                           }}>
                             {products.map((product) => {
+                              const isOutOfStock = product.stockStatus !== "in-stock";
+                              
                               return (
                                 <button
                                   key={product.id}
                                   type="button"
                                   onClick={(e) => {
                                     e.preventDefault();
-                                    addToCart(product);
+                                    if (!isOutOfStock) {
+                                      addToCart(product);
+                                    }
                                   }}
+                                  disabled={isOutOfStock}
                                   style={{
                                     display: "flex",
                                     flexDirection: "column",
                                     padding: "0",
                                     borderRadius: "12px",
-                                    border: "1px solid rgba(226, 232, 240, 0.8)",
-                                    background: "rgba(248, 250, 252, 0.6)",
-                                    cursor: "pointer",
+                                    border: isOutOfStock 
+                                      ? "1px solid rgba(156, 163, 175, 0.5)" 
+                                      : "1px solid rgba(226, 232, 240, 0.8)",
+                                    background: isOutOfStock 
+                                      ? "rgba(156, 163, 175, 0.1)" 
+                                      : "rgba(248, 250, 252, 0.6)",
+                                    cursor: isOutOfStock ? "not-allowed" : "pointer",
                                     transition: "all 150ms ease",
                                     textAlign: "left",
                                     height: "280px",
                                     justifyContent: "flex-start",
-                                    overflow: "hidden"
+                                    overflow: "hidden",
+                                    opacity: isOutOfStock ? 0.6 : 1,
+                                    filter: isOutOfStock ? "grayscale(50%)" : "none"
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    if (!isOutOfStock) {
+                                      e.currentTarget.style.transform = "translateY(-2px)";
+                                      e.currentTarget.style.boxShadow = "0 8px 25px rgba(15, 23, 42, 0.15)";
+                                    }
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    if (!isOutOfStock) {
+                                      e.currentTarget.style.transform = "translateY(0)";
+                                      e.currentTarget.style.boxShadow = "none";
+                                    }
                                   }}
                                 >
                                   {/* Image Container - Fixed Height */}
@@ -877,9 +962,13 @@ const processCheckout = async (paymentMethod) => {
                                         <div
                                           style={{
                                             fontSize: "0.75rem",
-                                            color: "#047857",
-                                            background: "rgba(16, 185, 129, 0.1)",
-                                            border: "1px solid rgba(16, 185, 129, 0.2)",
+                                            color: isOutOfStock ? "#dc2626" : "#047857",
+                                            background: isOutOfStock 
+                                              ? "rgba(239, 68, 68, 0.1)" 
+                                              : "rgba(16, 185, 129, 0.1)",
+                                            border: isOutOfStock 
+                                              ? "1px solid rgba(239, 68, 68, 0.2)" 
+                                              : "1px solid rgba(16, 185, 129, 0.2)",
                                             padding: "0.2rem 0.5rem",
                                             borderRadius: "6px",
                                             display: "inline-block",
@@ -887,7 +976,7 @@ const processCheckout = async (paymentMethod) => {
                                             flexShrink: 0
                                           }}
                                         >
-                                          In Stock
+                                          {isOutOfStock ? "Out of Stock" : "In Stock"}
                                         </div>
                                       </div>
                                     </div>
@@ -898,11 +987,24 @@ const processCheckout = async (paymentMethod) => {
                                         style={{
                                           fontSize: "1rem",
                                           fontWeight: "800",
-                                          color: "#059669"
+                                          color: isOutOfStock ? "#9ca3af" : "#059669"
                                         }}
                                       >
                                         ₱{Number(product.price).toLocaleString()}
                                       </span>
+                                      {isOutOfStock && (
+                                        <span style={{
+                                          fontSize: "0.7rem",
+                                          fontWeight: "600",
+                                          color: "#dc2626",
+                                          background: "rgba(239, 68, 68, 0.1)",
+                                          padding: "0.2rem 0.4rem",
+                                          borderRadius: "4px",
+                                          border: "1px solid rgba(239, 68, 68, 0.2)"
+                                        }}>
+                                          UNAVAILABLE
+                                        </span>
+                                      )}
                                     </div>
                                   </div>
                                 </button>
@@ -911,180 +1013,183 @@ const processCheckout = async (paymentMethod) => {
                           </div>
                         </div>
                       ));
-                    })()
-                    }
+                    })()}
                   </div>
                 )}
               </div>
             </div>
 
-            {/* RIGHT SIDE - Cart */}
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "1rem",
-                overflow: "hidden"
-              }}
-            >
-              {/* Cart Header */}
+            {/* RIGHT SIDE - Cart (Conditional) */}
+            {showCart && (
               <div
                 style={{
-                  background: "linear-gradient(90deg, rgba(59,130,246,0.16), rgba(16,185,129,0.12))",
-                  border: "1px solid rgba(226, 232, 240, 0.8)",
-                  borderRadius: "12px",
-                  padding: "1rem",
-                  boxShadow: "0 2px 8px rgba(15, 23, 42, 0.04)"
-                }}
-              >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <h2 style={{ fontSize: "1.1rem", fontWeight: "800", color: "#0f172a", margin: 0 }}>
-                    Cart ({cart.length})
-                  </h2>
-                  {cart.length > 0 && (
-                    <button
-                      onClick={clearCart}
-                      style={{
-                        padding: "0.5rem 0.75rem",
-                        borderRadius: "8px",
-                        border: "1px solid rgba(239,68,68,0.3)",
-                        background: "rgba(239,68,68,0.1)",
-                        color: "#dc2626",
-                        fontSize: "0.8rem",
-                        fontWeight: "600",
-                        cursor: "pointer",
-                        transition: "all 150ms ease"
-                      }}
-                    >
-                      Clear
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Cart Items */}
-              <div
-                style={{
-                  background: "rgba(248, 250, 252, 0.8)",
-                  border: "1px solid rgba(226, 232, 240, 0.8)",
-                  borderRadius: "12px",
-                  boxShadow: "0 2px 8px rgba(15, 23, 42, 0.04)",
-                  flex: "1",
-                  overflow: "hidden",
                   display: "flex",
-                  flexDirection: "column"
+                  flexDirection: "column",
+                  gap: "1rem",
+                  overflow: "hidden"
                 }}
               >
-                <div style={{ 
-                  flex: "1", 
-                  overflow: "auto", 
-                  padding: "1rem",
-                  minHeight: 0
-                }}>
-                  {cart.length === 0 ? (
-                    <div style={{ textAlign: "center", padding: "2rem", color: "#64748b" }}>
-                      <div style={{ fontSize: "1rem", fontWeight: "600", marginBottom: "0.5rem" }}>
-                        Cart is empty
-                      </div>
-                      <div style={{ fontSize: "0.9rem" }}>
-                        Add products to get started
-                      </div>
-                    </div>
-                  ) : (
-                    <div style={{ 
-                      display: "flex", 
-                      flexDirection: "column", 
-                      gap: "0.75rem",
-                      paddingRight: "0.5rem"
-                    }}>
-                      {cart.map((item) => (
-                        <div
-                          key={item.id}
+                {/* Cart Header */}
+                <div
+                  style={{
+                    background: "linear-gradient(90deg, rgba(59,130,246,0.16), rgba(16,185,129,0.12))",
+                    border: "1px solid rgba(226, 232, 240, 0.8)",
+                    borderRadius: "12px",
+                    padding: "1rem",
+                    boxShadow: "0 2px 8px rgba(15, 23, 42, 0.04)"
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <h2 style={{ fontSize: "1.1rem", fontWeight: "800", color: "#0f172a", margin: 0 }}>
+                      Cart ({cart.reduce((total, item) => total + item.quantity, 0)})
+                    </h2>
+                    <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                      {cart.length > 0 && (
+                        <button
+                          onClick={clearCart}
                           style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                            padding: "0.75rem",
-                            background: "rgba(255, 255, 255, 0.8)",
-                            borderRadius: "10px",
-                            border: "1px solid rgba(226, 232, 240, 0.6)"
+                            padding: "0.5rem 0.75rem",
+                            borderRadius: "8px",
+                            border: "1px solid rgba(239,68,68,0.3)",
+                            background: "rgba(239,68,68,0.1)",
+                            color: "#dc2626",
+                            fontSize: "0.8rem",
+                            fontWeight: "600",
+                            cursor: "pointer",
+                            transition: "all 150ms ease"
                           }}
                         >
-                          <div style={{ flex: "1" }}>
-                            <div style={{ fontSize: "0.9rem", fontWeight: "600", color: "#0f172a" }}>
-                              {item.name}
-                            </div>
-                            <div style={{ fontSize: "0.8rem", color: "#64748b" }}>
-                              ₱{Number(item.price).toLocaleString()} each
-                            </div>
-                          </div>
-                          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                            <button
-                              onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                              style={{
-                                width: "28px",
-                                height: "28px",
-                                borderRadius: "6px",
-                                border: "1px solid rgba(226, 232, 240, 0.8)",
-                                background: "rgba(248, 250, 252, 0.8)",
-                                cursor: "pointer",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                fontSize: "0.9rem",
-                                fontWeight: "600",
-                                color: "#64748b"
-                              }}
-                            >
-                              -
-                            </button>
-                            <span style={{ fontSize: "0.9rem", fontWeight: "600", minWidth: "20px", textAlign: "center" }}>
-                              {item.quantity}
-                            </span>
-                            <button
-                              onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                              style={{
-                                width: "28px",
-                                height: "28px",
-                                borderRadius: "6px",
-                                border: "1px solid rgba(226, 232, 240, 0.8)",
-                                background: "rgba(248, 250, 252, 0.8)",
-                                cursor: "pointer",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                fontSize: "0.9rem",
-                                fontWeight: "600",
-                                color: "#64748b"
-                              }}
-                            >
-                              +
-                            </button>
-                            <button
-                              onClick={() => removeFromCart(item.id)}
-                              style={{
-                                width: "28px",
-                                height: "28px",
-                                borderRadius: "6px",
-                                border: "1px solid rgba(239,68,68,0.3)",
-                                background: "rgba(239,68,68,0.1)",
-                                cursor: "pointer",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                fontSize: "0.9rem",
-                                fontWeight: "600",
-                                color: "#dc2626",
-                                marginLeft: "0.25rem"
-                              }}
-                            >
-                              ×
-                            </button>
-                          </div>
-                        </div>
-                      ))}
+                          Clear
+                        </button>
+                      )}
                     </div>
-                  )}
+                  </div>
+                </div>
+
+                {/* Cart Items */}
+                <div
+                  style={{
+                    background: "rgba(248, 250, 252, 0.8)",
+                    border: "1px solid rgba(226, 232, 240, 0.8)",
+                    borderRadius: "12px",
+                    boxShadow: "0 2px 8px rgba(15, 23, 42, 0.04)",
+                    flex: "1",
+                    overflow: "hidden",
+                    display: "flex",
+                    flexDirection: "column"
+                  }}
+                >
+                  <div style={{ 
+                    flex: "1", 
+                    overflow: "auto", 
+                    padding: "1rem",
+                    minHeight: 0
+                  }}>
+                    {cart.length === 0 ? (
+                      <div style={{ textAlign: "center", padding: "2rem", color: "#64748b" }}>
+                        <div style={{ fontSize: "1rem", fontWeight: "600", marginBottom: "0.5rem" }}>
+                          Cart is empty
+                        </div>
+                        <div style={{ fontSize: "0.9rem" }}>
+                          Add products to get started
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{ 
+                        display: "flex", 
+                        flexDirection: "column", 
+                        gap: "0.75rem",
+                        paddingRight: "0.5rem"
+                      }}>
+                        {cart.map((item) => (
+                          <div
+                            key={item.id}
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                              padding: "0.75rem",
+                              background: "rgba(255, 255, 255, 0.8)",
+                              borderRadius: "10px",
+                              border: "1px solid rgba(226, 232, 240, 0.6)"
+                            }}
+                          >
+                            <div style={{ flex: "1" }}>
+                              <div style={{ fontSize: "0.9rem", fontWeight: "600", color: "#0f172a" }}>
+                                {item.name}
+                              </div>
+                              <div style={{ fontSize: "0.8rem", color: "#64748b" }}>
+                                ₱{Number(item.price).toLocaleString()} each
+                              </div>
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                              <button
+                                onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                                style={{
+                                  width: "28px",
+                                  height: "28px",
+                                  borderRadius: "6px",
+                                  border: "1px solid rgba(226, 232, 240, 0.8)",
+                                  background: "rgba(248, 250, 252, 0.8)",
+                                  cursor: "pointer",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  fontSize: "0.9rem",
+                                  fontWeight: "600",
+                                  color: "#64748b"
+                                }}
+                              >
+                                -
+                              </button>
+                              <span style={{ fontSize: "0.9rem", fontWeight: "600", minWidth: "20px", textAlign: "center" }}>
+                                {item.quantity}
+                              </span>
+                              <button
+                                onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                                style={{
+                                  width: "28px",
+                                  height: "28px",
+                                  borderRadius: "6px",
+                                  border: "1px solid rgba(226, 232, 240, 0.8)",
+                                  background: "rgba(248, 250, 252, 0.8)",
+                                  cursor: "pointer",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  fontSize: "0.9rem",
+                                  fontWeight: "600",
+                                  color: "#64748b"
+                                }}
+                              >
+                                +
+                              </button>
+                              <button
+                                onClick={() => removeFromCart(item.id)}
+                                style={{
+                                  width: "28px",
+                                  height: "28px",
+                                  borderRadius: "6px",
+                                  border: "1px solid rgba(239,68,68,0.3)",
+                                  background: "rgba(239,68,68,0.1)",
+                                  cursor: "pointer",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  fontSize: "0.9rem",
+                                  fontWeight: "600",
+                                  color: "#dc2626",
+                                  marginLeft: "0.25rem"
+                                }}
+                              >
+                                ×
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Cart Total and Checkout */}
@@ -1106,27 +1211,65 @@ const processCheckout = async (paymentMethod) => {
                         </span>
                       </div>
                     </div>
-                    <button
-                      onClick={handleCheckout}
-                      style={{
-                        width: "100%",
-                        padding: "0.875rem",
-                        borderRadius: "12px",
-                        border: "none",
-                        background: "linear-gradient(135deg, #059669 0%, #047857 100%)",
-                        color: "white",
-                        fontSize: "1rem",
-                        fontWeight: "700",
-                        cursor: "pointer",
-                        transition: "all 150ms ease"
-                      }}
-                    >
-                      Checkout
-                    </button>
+                    <div style={{ display: "flex", gap: "0.75rem" }}>
+                      <button
+                        onClick={() => setShowCart(false)}
+                        style={{
+                          flex: "0.7",
+                          padding: "0.65rem",
+                          borderRadius: "12px",
+                          border: "none",
+                          background: "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)",
+                          color: "white",
+                          fontSize: "0.85rem",
+                          fontWeight: "600",
+                          cursor: "pointer",
+                          transition: "all 150ms ease",
+                          boxShadow: "0 4px 12px rgba(59, 130, 246, 0.3)"
+                        }}
+                        onMouseEnter={(e) => {
+                          e.target.style.background = "linear-gradient(135deg, #2563eb 0%, #1e40af 100%)";
+                          e.target.style.transform = "translateY(-1px)";
+                          e.target.style.boxShadow = "0 6px 16px rgba(59, 130, 246, 0.4)";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.target.style.background = "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)";
+                          e.target.style.transform = "translateY(0)";
+                          e.target.style.boxShadow = "0 4px 12px rgba(59, 130, 246, 0.3)";
+                        }}
+                      >
+                        Continue<br />Shopping
+                      </button>
+                      <button
+                        onClick={handleCheckout}
+                        style={{
+                          flex: "1.3",
+                          padding: "0.65rem",
+                          borderRadius: "12px",
+                          border: "none",
+                          background: "linear-gradient(135deg, #059669 0%, #047857 100%)",
+                          color: "white",
+                          fontSize: "0.95rem",
+                          fontWeight: "700",
+                          cursor: "pointer",
+                          transition: "all 150ms ease"
+                        }}
+                        onMouseEnter={(e) => {
+                          e.target.style.transform = "translateY(-1px)";
+                          e.target.style.boxShadow = "0 6px 16px rgba(5, 150, 105, 0.4)";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.target.style.transform = "translateY(0)";
+                          e.target.style.boxShadow = "0 4px 12px rgba(5, 150, 105, 0.3)";
+                        }}
+                      >
+                        Checkout
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
-            </div>
+            )}
           </div>
         </div>
       </div>

@@ -1,4 +1,5 @@
 import { useEffect, useState, useContext } from "react";
+import { useNavigate } from "react-router-dom";
 import { ref, onValue } from "firebase/database";
 import { db } from "../../lib/firebase";
 import { signOut } from "firebase/auth";
@@ -7,9 +8,11 @@ import { UserContext } from "../../context/UserContext.jsx";
 import MainLayout from "../../components/layout/MainLayout.jsx";
 import Header from "../../components/layout/Header.jsx";
 import { AlertTriangle, TrendingUp, Package, DollarSign, ShoppingCart, Clock, BarChart } from "lucide-react";
+import PesoIcon from "../../components/icons/PesoIcon.jsx";
 
 export default function Dashboard() {
   const { role } = useContext(UserContext);
+  const navigate = useNavigate();
   const [transactions, setTransactions] = useState([]);
   const [products, setProducts] = useState([]);
   const [todaySales, setTodaySales] = useState(0);
@@ -380,7 +383,7 @@ export default function Dashboard() {
                     position: "relative",
                     minHeight: "4px"
                   }}
-                  title={`${item.label}${item.sublabel ? ` ${item.sublabel}` : ''}: ₱${item.sales.toLocaleString()}`}
+                  title={`${item.label}${item.sublabel ? ` ${item.sublabel}` : ''}: ₱ ${item.sales.toLocaleString('en-PH')}`}
                 >
                   {item.sales > 0 && (
                     <div style={{
@@ -393,7 +396,7 @@ export default function Dashboard() {
                       color: "#374151",
                       whiteSpace: "nowrap"
                     }}>
-                      ₱{item.sales.toLocaleString()}
+                      ₱ {item.sales.toLocaleString('en-PH')}
                     </div>
                   )}
                 </div>
@@ -572,13 +575,13 @@ export default function Dashboard() {
                   }}
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
-                    <DollarSign size={18} style={{ color: "#059669" }} />
+                    <PesoIcon size={18} style={{ color: "#059669" }} />
                     <div style={{ fontSize: "0.9rem", color: "#64748b", fontWeight: 700 }}>
                       Sales {selectedPeriod === 'today' ? 'Today' : selectedPeriod === '3months' ? '3 Months' : selectedPeriod === '6months' ? '6 Months' : selectedPeriod.charAt(0).toUpperCase() + selectedPeriod.slice(1)}
                     </div>
                   </div>
                   <div style={{ fontSize: "1.5rem", fontWeight: 900, color: "#0f172a" }}>
-                    ₱{periodSales.toLocaleString()}
+                    ₱ {periodSales.toLocaleString('en-PH')}
                   </div>
                   <div style={{ marginTop: "0.65rem" }}>
                     <span
@@ -613,7 +616,7 @@ export default function Dashboard() {
                     <div style={{ fontSize: "0.9rem", color: "#64748b", fontWeight: 700 }}>Avg Order Value</div>
                   </div>
                   <div style={{ fontSize: "1.5rem", fontWeight: 900, color: "#0f172a" }}>
-                    ₱{averageOrderValue.toLocaleString()}
+                    ₱ {averageOrderValue.toLocaleString('en-PH')}
                   </div>
                   <div style={{ marginTop: "0.65rem" }}>
                     <span
@@ -635,12 +638,23 @@ export default function Dashboard() {
                 </div>
 
                 <div
+                  onClick={() => navigate('/transactions', { state: { filterPeriod: selectedPeriod } })}
                   style={{
                     padding: "1rem",
                     borderRadius: "16px",
                     background: "rgba(255,255,255,0.75)",
                     border: "1px solid rgba(226, 232, 240, 0.85)",
                     boxShadow: "0 14px 30px rgba(15, 23, 42, 0.08)",
+                    cursor: "pointer",
+                    transition: "all 200ms ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = "translateY(-2px)";
+                    e.currentTarget.style.boxShadow = "0 20px 40px rgba(15, 23, 42, 0.12)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = "translateY(0)";
+                    e.currentTarget.style.boxShadow = "0 14px 30px rgba(15, 23, 42, 0.08)";
                   }}
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
@@ -672,12 +686,23 @@ export default function Dashboard() {
                 </div>
 
                 <div
+                  onClick={() => navigate('/products')}
                   style={{
                     padding: "1rem",
                     borderRadius: "16px",
                     background: "rgba(255,255,255,0.75)",
                     border: "1px solid rgba(226, 232, 240, 0.85)",
                     boxShadow: "0 14px 30px rgba(15, 23, 42, 0.08)",
+                    cursor: "pointer",
+                    transition: "all 200ms ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = "translateY(-2px)";
+                    e.currentTarget.style.boxShadow = "0 20px 40px rgba(15, 23, 42, 0.12)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = "translateY(0)";
+                    e.currentTarget.style.boxShadow = "0 14px 30px rgba(15, 23, 42, 0.08)";
                   }}
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
@@ -804,7 +829,7 @@ export default function Dashboard() {
                                 {item.name}
                               </div>
                               <div style={{ fontSize: "0.8rem", color: "#64748b" }}>
-                                ₱{item.revenue.toLocaleString()} revenue
+                                ₱ {item.revenue.toLocaleString('en-PH')} revenue
                               </div>
                             </div>
                             <div style={{
@@ -890,7 +915,7 @@ export default function Dashboard() {
                                   {category.category}
                                 </div>
                                 <div style={{ fontSize: "0.8rem", fontWeight: "700", color: "#d97706" }}>
-                                  ₱{category.revenue.toLocaleString()}
+                                  ₱ {category.revenue.toLocaleString('en-PH')}
                                 </div>
                               </div>
                               <div style={{
