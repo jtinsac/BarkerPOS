@@ -22,6 +22,8 @@ export default function Dashboard() {
   const [revenueByCategory, setRevenueByCategory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedPeriod, setSelectedPeriod] = useState('week'); // week, month, 3months, 6months
+  const [periodRevenue, setPeriodRevenue] = useState(0);
+  const [periodTransactionCount, setPeriodTransactionCount] = useState(0);
 
   async function handleLogout() {
     try {
@@ -143,6 +145,13 @@ export default function Dashboard() {
 
     // Calculate most sold items for selected period
     const periodTransactions = getFilteredTransactions(selectedPeriod);
+    
+    // Calculate period revenue and transaction count
+    const periodRev = periodTransactions.reduce((sum, transaction) => sum + (transaction.total || 0), 0);
+    const periodTxnCount = periodTransactions.length;
+    setPeriodRevenue(periodRev);
+    setPeriodTransactionCount(periodTxnCount);
+    
     const itemSales = {};
     periodTransactions.forEach(transaction => {
       if (transaction.items) {
@@ -230,7 +239,72 @@ export default function Dashboard() {
     setRevenueByCategory(sortedCategories);
   }, [transactions, products, selectedPeriod]);
 
-  // Weekly sales chart component
+  // Revenue by Category Chart component
+  const RevenueByCategoryChart = () => {
+    if (revenueByCategory.length === 0) return null;
+    
+    const maxRevenue = Math.max(...revenueByCategory.map(c => c.revenue), 1);
+    
+    return (
+      <div style={{ padding: "1rem" }}>
+        <div style={{ display: "flex", alignItems: "end", gap: "0.75rem", height: "120px", marginBottom: "0.5rem" }}>
+          {revenueByCategory.map((category, index) => {
+            const height = (category.revenue / maxRevenue) * 100;
+            const colors = [
+              "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
+              "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)",
+              "linear-gradient(135deg, #059669 0%, #047857 100%)",
+              "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
+              "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)",
+              "linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)"
+            ];
+            return (
+              <div key={index} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "0.5rem" }}>
+                <div
+                  style={{
+                    width: "100%",
+                    height: `${Math.max(height, 2)}%`,
+                    background: colors[index % colors.length],
+                    borderRadius: "4px 4px 0 0",
+                    transition: "all 200ms ease",
+                    position: "relative",
+                    minHeight: "4px"
+                  }}
+                  title={`${category.category}: ₱${category.revenue.toLocaleString()}`}
+                >
+                  {category.revenue > 0 && (
+                    <div style={{
+                      position: "absolute",
+                      top: "-1.5rem",
+                      left: "50%",
+                      transform: "translateX(-50%)",
+                      fontSize: "0.7rem",
+                      fontWeight: "600",
+                      color: "#374151",
+                      whiteSpace: "nowrap"
+                    }}>
+                      ₱{category.revenue.toLocaleString()}
+                    </div>
+                  )}
+                </div>
+                <div style={{ 
+                  fontSize: "0.7rem", 
+                  fontWeight: "600", 
+                  color: "#64748b",
+                  textAlign: "center",
+                  lineHeight: "1.1",
+                  maxWidth: "100%",
+                  wordWrap: "break-word"
+                }}>
+                  {category.category}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
   const WeeklySalesChart = () => {
     const maxSales = Math.max(...weeklySales.map(day => day.sales), 1);
     
@@ -443,6 +517,44 @@ export default function Dashboard() {
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
                     <DollarSign size={18} style={{ color: "#059669" }} />
+                    <div style={{ fontSize: "0.9rem", color: "#64748b", fontWeight: 700 }}>
+                      Total Revenue ({selectedPeriod === '3months' ? '3 Months' : selectedPeriod === '6months' ? '6 Months' : selectedPeriod})
+                    </div>
+                  </div>
+                  <div style={{ fontSize: "1.5rem", fontWeight: 900, color: "#0f172a" }}>
+                    ₱{periodRevenue.toLocaleString()}
+                  </div>
+                  <div style={{ marginTop: "0.65rem" }}>
+                    <span
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        padding: "0.35rem 0.6rem",
+                        borderRadius: "999px",
+                        background: "rgba(16,185,129,0.10)",
+                        border: "1px solid rgba(16,185,129,0.35)",
+                        color: "#047857",
+                        fontWeight: 900,
+                        fontSize: "0.82rem",
+                        textTransform: "capitalize"
+                      }}
+                    >
+                      {selectedPeriod === '3months' ? '3 Months' : selectedPeriod === '6months' ? '6 Months' : selectedPeriod}
+                    </span>
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    padding: "1rem",
+                    borderRadius: "16px",
+                    background: "rgba(255,255,255,0.75)",
+                    border: "1px solid rgba(226, 232, 240, 0.85)",
+                    boxShadow: "0 14px 30px rgba(15, 23, 42, 0.08)",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
+                    <DollarSign size={18} style={{ color: "#8b5cf6" }} />
                     <div style={{ fontSize: "0.9rem", color: "#64748b", fontWeight: 700 }}>Sales Today</div>
                   </div>
                   <div style={{ fontSize: "1.5rem", fontWeight: 900, color: "#0f172a" }}>
@@ -455,9 +567,9 @@ export default function Dashboard() {
                         alignItems: "center",
                         padding: "0.35rem 0.6rem",
                         borderRadius: "999px",
-                        background: "rgba(16,185,129,0.10)",
-                        border: "1px solid rgba(16,185,129,0.35)",
-                        color: "#047857",
+                        background: "rgba(139,92,246,0.10)",
+                        border: "1px solid rgba(139,92,246,0.35)",
+                        color: "#7c3aed",
                         fontWeight: 900,
                         fontSize: "0.82rem",
                       }}
@@ -477,46 +589,13 @@ export default function Dashboard() {
                   }}
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
-                    <ShoppingCart size={18} style={{ color: "#8b5cf6" }} />
-                    <div style={{ fontSize: "0.9rem", color: "#64748b", fontWeight: 700 }}>Avg Order Value</div>
-                  </div>
-                  <div style={{ fontSize: "1.5rem", fontWeight: 900, color: "#0f172a" }}>
-                    ₱{averageOrderValue.toLocaleString()}
-                  </div>
-                  <div style={{ marginTop: "0.65rem" }}>
-                    <span
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        padding: "0.35rem 0.6rem",
-                        borderRadius: "999px",
-                        background: "rgba(139,92,246,0.10)",
-                        border: "1px solid rgba(139,92,246,0.35)",
-                        color: "#7c3aed",
-                        fontWeight: 900,
-                        fontSize: "0.82rem",
-                      }}
-                    >
-                      Per Sale
-                    </span>
-                  </div>
-                </div>
-
-                <div
-                  style={{
-                    padding: "1rem",
-                    borderRadius: "16px",
-                    background: "rgba(255,255,255,0.75)",
-                    border: "1px solid rgba(226, 232, 240, 0.85)",
-                    boxShadow: "0 14px 30px rgba(15, 23, 42, 0.08)",
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
                     <Package size={18} style={{ color: "#3b82f6" }} />
-                    <div style={{ fontSize: "0.9rem", color: "#64748b", fontWeight: 700 }}>Transactions Today</div>
+                    <div style={{ fontSize: "0.9rem", color: "#64748b", fontWeight: 700 }}>
+                      Total Transactions ({selectedPeriod === '3months' ? '3 Months' : selectedPeriod === '6months' ? '6 Months' : selectedPeriod})
+                    </div>
                   </div>
                   <div style={{ fontSize: "1.5rem", fontWeight: 900, color: "#0f172a" }}>
-                    {transactionCount}
+                    {periodTransactionCount}
                   </div>
                   <div style={{ marginTop: "0.65rem" }}>
                     <span
@@ -530,9 +609,10 @@ export default function Dashboard() {
                         color: "#1d4ed8",
                         fontWeight: 900,
                         fontSize: "0.82rem",
+                        textTransform: "capitalize"
                       }}
                     >
-                      Sales
+                      {selectedPeriod === '3months' ? '3 Months' : selectedPeriod === '6months' ? '6 Months' : selectedPeriod}
                     </span>
                   </div>
                 </div>
@@ -580,7 +660,7 @@ export default function Dashboard() {
                 gap: "2rem", 
                 marginBottom: "3rem"
               }}>
-                {/* Weekly Sales Chart */}
+                {/* Revenue by Category Chart */}
                 <div style={{
                   background: "rgba(248, 250, 252, 0.8)",
                   border: "1px solid rgba(226, 232, 240, 0.8)",
@@ -593,16 +673,33 @@ export default function Dashboard() {
                     borderBottom: "1px solid rgba(226, 232, 240, 0.8)"
                   }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                      <TrendingUp size={18} style={{ color: "#059669" }} />
+                      <BarChart size={18} style={{ color: "#f59e0b" }} />
                       <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 800, color: "#0f172a" }}>
-                        Weekly Sales
+                        Revenue by Category
                       </h3>
+                      <span style={{
+                        padding: "0.2rem 0.5rem",
+                        borderRadius: "6px",
+                        background: "rgba(245,158,11,0.15)",
+                        color: "#d97706",
+                        fontSize: "0.75rem",
+                        fontWeight: 700,
+                        textTransform: "capitalize"
+                      }}>
+                        {selectedPeriod === '3months' ? '3 Months' : selectedPeriod === '6months' ? '6 Months' : selectedPeriod}
+                      </span>
                     </div>
                     <p style={{ margin: "0.25rem 0 0", fontSize: "0.85rem", color: "#64748b" }}>
-                      Last 7 days performance
+                      Category performance in selected period
                     </p>
                   </div>
-                  <WeeklySalesChart />
+                  {revenueByCategory.length === 0 ? (
+                    <div style={{ textAlign: "center", color: "#64748b", padding: "3rem" }}>
+                      <div style={{ fontSize: "0.9rem" }}>No category data yet</div>
+                    </div>
+                  ) : (
+                    <RevenueByCategoryChart />
+                  )}
                 </div>
 
                 {/* Most Sold Items */}
@@ -691,14 +788,12 @@ export default function Dashboard() {
                 gap: "2rem", 
                 marginBottom: "3rem"
               }}>
-                {/* Revenue by Category */}
+                {/* Weekly Sales Chart */}
                 <div style={{
                   background: "rgba(248, 250, 252, 0.8)",
                   border: "1px solid rgba(226, 232, 240, 0.8)",
                   borderRadius: "12px",
-                  overflow: "hidden",
-                  display: "flex",
-                  flexDirection: "column"
+                  overflow: "hidden"
                 }}>
                   <div style={{
                     background: "linear-gradient(90deg, rgba(59,130,246,0.16), rgba(16,185,129,0.12))",
@@ -706,72 +801,16 @@ export default function Dashboard() {
                     borderBottom: "1px solid rgba(226, 232, 240, 0.8)"
                   }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                      <BarChart size={18} style={{ color: "#f59e0b" }} />
+                      <TrendingUp size={18} style={{ color: "#059669" }} />
                       <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 800, color: "#0f172a" }}>
-                        Revenue by Category
+                        Weekly Sales Trend
                       </h3>
-                      <span style={{
-                        padding: "0.2rem 0.5rem",
-                        borderRadius: "6px",
-                        background: "rgba(245,158,11,0.15)",
-                        color: "#d97706",
-                        fontSize: "0.75rem",
-                        fontWeight: 700,
-                        textTransform: "capitalize"
-                      }}>
-                        {selectedPeriod === '3months' ? '3 Months' : selectedPeriod === '6months' ? '6 Months' : selectedPeriod}
-                      </span>
                     </div>
                     <p style={{ margin: "0.25rem 0 0", fontSize: "0.85rem", color: "#64748b" }}>
-                      Top performing categories in selected period
+                      Last 7 days performance
                     </p>
                   </div>
-                  <div style={{ padding: "1rem", flex: "1", overflow: "auto" }}>
-                    {revenueByCategory.length === 0 ? (
-                      <div style={{ textAlign: "center", color: "#64748b", padding: "2rem" }}>
-                        <div style={{ fontSize: "0.9rem" }}>No category data yet</div>
-                      </div>
-                    ) : (
-                      <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                        {revenueByCategory.map((category, index) => {
-                          const maxRevenue = Math.max(...revenueByCategory.map(c => c.revenue), 1);
-                          const percentage = (category.revenue / maxRevenue) * 100;
-                          return (
-                            <div key={index} style={{
-                              padding: "0.75rem",
-                              background: "rgba(255, 255, 255, 0.8)",
-                              borderRadius: "8px",
-                              border: "1px solid rgba(226, 232, 240, 0.6)"
-                            }}>
-                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
-                                <div style={{ fontSize: "0.9rem", fontWeight: "600", color: "#0f172a" }}>
-                                  {category.category}
-                                </div>
-                                <div style={{ fontSize: "0.8rem", fontWeight: "700", color: "#d97706" }}>
-                                  ₱{category.revenue.toLocaleString()}
-                                </div>
-                              </div>
-                              <div style={{
-                                width: "100%",
-                                height: "4px",
-                                background: "rgba(226, 232, 240, 0.5)",
-                                borderRadius: "2px",
-                                overflow: "hidden"
-                              }}>
-                                <div style={{
-                                  width: `${percentage}%`,
-                                  height: "100%",
-                                  background: "linear-gradient(90deg, #f59e0b, #d97706)",
-                                  borderRadius: "2px",
-                                  transition: "width 0.3s ease"
-                                }} />
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
+                  <WeeklySalesChart />
                 </div>
               </div>
 
