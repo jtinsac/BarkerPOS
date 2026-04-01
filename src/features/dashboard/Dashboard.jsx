@@ -21,6 +21,7 @@ export default function Dashboard() {
   const [peakHours, setPeakHours] = useState([]);
   const [revenueByCategory, setRevenueByCategory] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedPeriod, setSelectedPeriod] = useState('week'); // week, month, 3months, 6months
 
   async function handleLogout() {
     try {
@@ -29,6 +30,39 @@ export default function Dashboard() {
       console.error("Logout error:", error);
     }
   }
+
+  // Helper function to get date range based on selected period
+  const getDateRange = (period) => {
+    const now = new Date();
+    const startDate = new Date();
+    
+    switch (period) {
+      case 'week':
+        startDate.setDate(now.getDate() - 7);
+        break;
+      case 'month':
+        startDate.setMonth(now.getMonth() - 1);
+        break;
+      case '3months':
+        startDate.setMonth(now.getMonth() - 3);
+        break;
+      case '6months':
+        startDate.setMonth(now.getMonth() - 6);
+        break;
+      default:
+        startDate.setDate(now.getDate() - 7);
+    }
+    
+    return { startDate: startDate.getTime(), endDate: now.getTime() };
+  };
+
+  // Filter transactions by selected period
+  const getFilteredTransactions = (period) => {
+    const { startDate, endDate } = getDateRange(period);
+    return transactions.filter(
+      transaction => transaction.createdAt >= startDate && transaction.createdAt <= endDate
+    );
+  };
 
   useEffect(() => {
     // Listen to transactions
@@ -107,9 +141,10 @@ export default function Dashboard() {
     }
     setWeeklySales(weeklyData);
 
-    // Calculate most sold items
+    // Calculate most sold items for selected period
+    const periodTransactions = getFilteredTransactions(selectedPeriod);
     const itemSales = {};
-    transactions.forEach(transaction => {
+    periodTransactions.forEach(transaction => {
       if (transaction.items) {
         transaction.items.forEach(item => {
           if (itemSales[item.productId]) {
@@ -131,9 +166,9 @@ export default function Dashboard() {
       .slice(0, 5);
     setMostSoldItems(sortedItems);
 
-    // Find low stock items (under 10)
-    const lowStock = products.filter(product => (product.stock || 0) < 10)
-      .sort((a, b) => (a.stock || 0) - (b.stock || 0));
+    // Find out of stock items
+    const lowStock = products.filter(product => product.stockStatus === "out-of-stock")
+      .sort((a, b) => a.name.localeCompare(b.name));
     setLowStockItems(lowStock);
 
     // Calculate Average Order Value
@@ -169,10 +204,10 @@ export default function Dashboard() {
       .slice(0, 5);
     setPeakHours(sortedHours);
 
-    // Calculate revenue by category
+    // Calculate revenue by category for selected period
     const categoryRevenue = {};
     
-    transactions.forEach(transaction => {
+    periodTransactions.forEach(transaction => {
       if (transaction.items) {
         transaction.items.forEach(item => {
           // Find the product to get its category
@@ -193,7 +228,7 @@ export default function Dashboard() {
       .sort((a, b) => b.revenue - a.revenue)
       .slice(0, 6);
     setRevenueByCategory(sortedCategories);
-  }, [transactions, products]);
+  }, [transactions, products, selectedPeriod]);
 
   // Weekly sales chart component
   const WeeklySalesChart = () => {
@@ -338,6 +373,41 @@ export default function Dashboard() {
                   Connected
                 </div>
               </div>
+            </div>
+
+            {/* Period Filter */}
+            <div style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap", marginBottom: "2rem" }}>
+              <div style={{ fontSize: "0.9rem", fontWeight: 600, color: "#64748b", display: "flex", alignItems: "center", marginRight: "0.5rem" }}>
+                Analytics Period:
+              </div>
+              {[
+                { key: 'week', label: 'Week' },
+                { key: 'month', label: 'Month' },
+                { key: '3months', label: '3 Months' },
+                { key: '6months', label: '6 Months' }
+              ].map(period => (
+                <button
+                  key={period.key}
+                  onClick={() => setSelectedPeriod(period.key)}
+                  style={{
+                    padding: "0.5rem 0.75rem",
+                    borderRadius: "10px",
+                    border: selectedPeriod === period.key 
+                      ? "1px solid rgba(59,130,246,0.5)" 
+                      : "1px solid rgba(226, 232, 240, 0.8)",
+                    background: selectedPeriod === period.key 
+                      ? "rgba(59,130,246,0.15)" 
+                      : "rgba(255,255,255,0.8)",
+                    color: selectedPeriod === period.key ? "#1d4ed8" : "#64748b",
+                    fontWeight: selectedPeriod === period.key ? 700 : 600,
+                    fontSize: "0.85rem",
+                    cursor: "pointer",
+                    transition: "all 150ms ease"
+                  }}
+                >
+                  {period.label}
+                </button>
+              ))}
             </div>
 
             <div
@@ -554,9 +624,20 @@ export default function Dashboard() {
                       <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 800, color: "#0f172a" }}>
                         Top Selling Items
                       </h3>
+                      <span style={{
+                        padding: "0.2rem 0.5rem",
+                        borderRadius: "6px",
+                        background: "rgba(59,130,246,0.15)",
+                        color: "#1d4ed8",
+                        fontSize: "0.75rem",
+                        fontWeight: 700,
+                        textTransform: "capitalize"
+                      }}>
+                        {selectedPeriod === '3months' ? '3 Months' : selectedPeriod === '6months' ? '6 Months' : selectedPeriod}
+                      </span>
                     </div>
                     <p style={{ margin: "0.25rem 0 0", fontSize: "0.85rem", color: "#64748b" }}>
-                      Most popular products
+                      Most popular products in selected period
                     </p>
                   </div>
                   <div style={{ padding: "1rem", flex: "1", overflow: "auto" }}>
@@ -629,9 +710,20 @@ export default function Dashboard() {
                       <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 800, color: "#0f172a" }}>
                         Revenue by Category
                       </h3>
+                      <span style={{
+                        padding: "0.2rem 0.5rem",
+                        borderRadius: "6px",
+                        background: "rgba(245,158,11,0.15)",
+                        color: "#d97706",
+                        fontSize: "0.75rem",
+                        fontWeight: 700,
+                        textTransform: "capitalize"
+                      }}>
+                        {selectedPeriod === '3months' ? '3 Months' : selectedPeriod === '6months' ? '6 Months' : selectedPeriod}
+                      </span>
                     </div>
                     <p style={{ margin: "0.25rem 0 0", fontSize: "0.85rem", color: "#64748b" }}>
-                      Top performing categories
+                      Top performing categories in selected period
                     </p>
                   </div>
                   <div style={{ padding: "1rem", flex: "1", overflow: "auto" }}>
@@ -683,7 +775,7 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              {/* Low Stock Alerts */}
+              {/* Out of Stock Alerts */}
               {lowStockItems.length > 0 && (
                 <div style={{
                   background: "rgba(248, 250, 252, 0.8)",
@@ -701,11 +793,11 @@ export default function Dashboard() {
                     <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                       <AlertTriangle size={18} style={{ color: "#dc2626" }} />
                       <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 800, color: "#0f172a" }}>
-                        Low Stock Alert
+                        Out of Stock Alert
                       </h3>
                     </div>
                     <p style={{ margin: "0.25rem 0 0", fontSize: "0.85rem", color: "#64748b" }}>
-                      Items with stock under 10 units
+                      Items currently out of stock
                     </p>
                   </div>
                   <div style={{ padding: "1.5rem" }}>
@@ -735,13 +827,13 @@ export default function Dashboard() {
                           <div style={{
                             padding: "0.25rem 0.5rem",
                             borderRadius: "6px",
-                            background: (item.stock || 0) === 0 ? "rgba(239,68,68,0.15)" : "rgba(245,158,11,0.15)",
-                            border: (item.stock || 0) === 0 ? "1px solid rgba(239,68,68,0.3)" : "1px solid rgba(245,158,11,0.3)",
-                            color: (item.stock || 0) === 0 ? "#dc2626" : "#d97706",
+                            background: "rgba(239,68,68,0.15)",
+                            border: "1px solid rgba(239,68,68,0.3)",
+                            color: "#dc2626",
                             fontSize: "0.8rem",
                             fontWeight: "700"
                           }}>
-                            {item.stock || 0} left
+                            Out of Stock
                           </div>
                         </div>
                       ))}
