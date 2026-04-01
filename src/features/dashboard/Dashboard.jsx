@@ -22,6 +22,8 @@ export default function Dashboard() {
   const [revenueByCategory, setRevenueByCategory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedPeriod, setSelectedPeriod] = useState('week'); // week, month, 3months, 6months
+  const [periodSales, setPeriodSales] = useState(0);
+  const [periodTransactionCount, setPeriodTransactionCount] = useState(0);
 
   async function handleLogout() {
     try {
@@ -228,24 +230,142 @@ export default function Dashboard() {
       .sort((a, b) => b.revenue - a.revenue)
       .slice(0, 6);
     setRevenueByCategory(sortedCategories);
+
+    // Calculate sales and transactions for selected period
+    const selectedPeriodTransactions = selectedPeriod === 'today' 
+      ? todayTransactions 
+      : getFilteredTransactions(selectedPeriod);
+    
+    const selectedPeriodSales = selectedPeriodTransactions.reduce((sum, transaction) => sum + (transaction.total || 0), 0);
+    setPeriodSales(selectedPeriodSales);
+    setPeriodTransactionCount(selectedPeriodTransactions.length);
   }, [transactions, products, selectedPeriod]);
 
   // Weekly sales chart component
   const WeeklySalesChart = () => {
-    const maxSales = Math.max(...weeklySales.map(day => day.sales), 1);
+    let chartData = [];
+    const now = new Date();
+    
+    if (selectedPeriod === 'today') {
+      // Show hourly data for today
+      for (let i = 0; i < 24; i++) {
+        const hourStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), i).getTime();
+        const hourEnd = hourStart + 60 * 60 * 1000;
+        
+        const hourTransactions = transactions.filter(
+          transaction => transaction.createdAt >= hourStart && transaction.createdAt < hourEnd
+        );
+        const hourTotal = hourTransactions.reduce((sum, transaction) => sum + (transaction.total || 0), 0);
+        
+        chartData.push({
+          label: `${i}:00`,
+          sales: hourTotal,
+          isCurrent: i === now.getHours()
+        });
+      }
+    } else if (selectedPeriod === 'week') {
+      // Show daily data for last 7 days
+      const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      
+      for (let i = 6; i >= 0; i--) {
+        const date = new Date(now);
+        date.setDate(date.getDate() - i);
+        const dayStart = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+        const dayEnd = dayStart + 24 * 60 * 60 * 1000;
+        
+        const dayTransactions = transactions.filter(
+          transaction => transaction.createdAt >= dayStart && transaction.createdAt < dayEnd
+        );
+        const dayTotal = dayTransactions.reduce((sum, transaction) => sum + (transaction.total || 0), 0);
+        
+        chartData.push({
+          label: dayNames[date.getDay()],
+          sublabel: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          sales: dayTotal,
+          isCurrent: i === 0
+        });
+      }
+    } else if (selectedPeriod === 'month') {
+      // Show weekly data for last 4 weeks
+      for (let i = 3; i >= 0; i--) {
+        const weekEnd = new Date(now);
+        weekEnd.setDate(weekEnd.getDate() - (i * 7));
+        const weekStart = new Date(weekEnd);
+        weekStart.setDate(weekStart.getDate() - 6);
+        
+        const weekStartTime = new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate()).getTime();
+        const weekEndTime = new Date(weekEnd.getFullYear(), weekEnd.getMonth(), weekEnd.getDate(), 23, 59, 59).getTime();
+        
+        const weekTransactions = transactions.filter(
+          transaction => transaction.createdAt >= weekStartTime && transaction.createdAt <= weekEndTime
+        );
+        const weekTotal = weekTransactions.reduce((sum, transaction) => sum + (transaction.total || 0), 0);
+        
+        chartData.push({
+          label: `Week ${4-i}`,
+          sublabel: `${weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${weekEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`,
+          sales: weekTotal,
+          isCurrent: i === 0
+        });
+      }
+    } else if (selectedPeriod === '3months') {
+      // Show monthly data for last 3 months
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      
+      for (let i = 2; i >= 0; i--) {
+        const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const monthStart = monthDate.getTime();
+        const monthEnd = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0, 23, 59, 59).getTime();
+        
+        const monthTransactions = transactions.filter(
+          transaction => transaction.createdAt >= monthStart && transaction.createdAt <= monthEnd
+        );
+        const monthTotal = monthTransactions.reduce((sum, transaction) => sum + (transaction.total || 0), 0);
+        
+        chartData.push({
+          label: monthNames[monthDate.getMonth()],
+          sublabel: monthDate.getFullYear().toString(),
+          sales: monthTotal,
+          isCurrent: i === 0
+        });
+      }
+    } else if (selectedPeriod === '6months') {
+      // Show monthly data for last 6 months
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      
+      for (let i = 5; i >= 0; i--) {
+        const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const monthStart = monthDate.getTime();
+        const monthEnd = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0, 23, 59, 59).getTime();
+        
+        const monthTransactions = transactions.filter(
+          transaction => transaction.createdAt >= monthStart && transaction.createdAt <= monthEnd
+        );
+        const monthTotal = monthTransactions.reduce((sum, transaction) => sum + (transaction.total || 0), 0);
+        
+        chartData.push({
+          label: monthNames[monthDate.getMonth()],
+          sublabel: monthDate.getFullYear().toString(),
+          sales: monthTotal,
+          isCurrent: i === 0
+        });
+      }
+    }
+    
+    const maxSales = Math.max(...chartData.map(item => item.sales), 1);
     
     return (
       <div style={{ padding: "1rem" }}>
         <div style={{ display: "flex", alignItems: "end", gap: "0.5rem", height: "120px", marginBottom: "0.5rem" }}>
-          {weeklySales.map((day, index) => {
-            const height = (day.sales / maxSales) * 100;
+          {chartData.map((item, index) => {
+            const height = (item.sales / maxSales) * 100;
             return (
               <div key={index} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "0.5rem" }}>
                 <div
                   style={{
                     width: "100%",
                     height: `${Math.max(height, 2)}%`,
-                    background: day.isToday 
+                    background: item.isCurrent 
                       ? "linear-gradient(135deg, #059669 0%, #047857 100%)"
                       : "linear-gradient(135deg, rgba(59,130,246,0.8) 0%, rgba(16,185,129,0.6) 100%)",
                     borderRadius: "4px 4px 0 0",
@@ -253,9 +373,9 @@ export default function Dashboard() {
                     position: "relative",
                     minHeight: "4px"
                   }}
-                  title={`${day.day} ${day.date}: ₱${day.sales.toLocaleString()}`}
+                  title={`${item.label}${item.sublabel ? ` ${item.sublabel}` : ''}: ₱${item.sales.toLocaleString()}`}
                 >
-                  {day.sales > 0 && (
+                  {item.sales > 0 && (
                     <div style={{
                       position: "absolute",
                       top: "-1.5rem",
@@ -266,16 +386,18 @@ export default function Dashboard() {
                       color: "#374151",
                       whiteSpace: "nowrap"
                     }}>
-                      ₱{day.sales.toLocaleString()}
+                      ₱{item.sales.toLocaleString()}
                     </div>
                   )}
                 </div>
-                <div style={{ fontSize: "0.75rem", fontWeight: "600", color: day.isToday ? "#059669" : "#64748b" }}>
-                  {day.day}
+                <div style={{ fontSize: "0.75rem", fontWeight: "600", color: item.isCurrent ? "#059669" : "#64748b" }}>
+                  {item.label}
                 </div>
-                <div style={{ fontSize: "0.65rem", color: "#9ca3af" }}>
-                  {day.date}
-                </div>
+                {item.sublabel && (
+                  <div style={{ fontSize: "0.65rem", color: "#9ca3af" }}>
+                    {item.sublabel}
+                  </div>
+                )}
               </div>
             );
           })}
@@ -381,6 +503,7 @@ export default function Dashboard() {
                 Analytics Period:
               </div>
               {[
+                { key: 'today', label: 'Today' },
                 { key: 'week', label: 'Week' },
                 { key: 'month', label: 'Month' },
                 { key: '3months', label: '3 Months' },
@@ -443,10 +566,12 @@ export default function Dashboard() {
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
                     <DollarSign size={18} style={{ color: "#059669" }} />
-                    <div style={{ fontSize: "0.9rem", color: "#64748b", fontWeight: 700 }}>Sales Today</div>
+                    <div style={{ fontSize: "0.9rem", color: "#64748b", fontWeight: 700 }}>
+                      Sales {selectedPeriod === 'today' ? 'Today' : selectedPeriod === '3months' ? '3 Months' : selectedPeriod === '6months' ? '6 Months' : selectedPeriod.charAt(0).toUpperCase() + selectedPeriod.slice(1)}
+                    </div>
                   </div>
                   <div style={{ fontSize: "1.5rem", fontWeight: 900, color: "#0f172a" }}>
-                    ₱{todaySales.toLocaleString()}
+                    ₱{periodSales.toLocaleString()}
                   </div>
                   <div style={{ marginTop: "0.65rem" }}>
                     <span
@@ -513,10 +638,12 @@ export default function Dashboard() {
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
                     <Package size={18} style={{ color: "#3b82f6" }} />
-                    <div style={{ fontSize: "0.9rem", color: "#64748b", fontWeight: 700 }}>Transactions Today</div>
+                    <div style={{ fontSize: "0.9rem", color: "#64748b", fontWeight: 700 }}>
+                      Transactions {selectedPeriod === 'today' ? 'Today' : selectedPeriod === '3months' ? '3 Months' : selectedPeriod === '6months' ? '6 Months' : selectedPeriod.charAt(0).toUpperCase() + selectedPeriod.slice(1)}
+                    </div>
                   </div>
                   <div style={{ fontSize: "1.5rem", fontWeight: 900, color: "#0f172a" }}>
-                    {transactionCount}
+                    {periodTransactionCount}
                   </div>
                   <div style={{ marginTop: "0.65rem" }}>
                     <span
@@ -576,34 +703,42 @@ export default function Dashboard() {
               {/* Main Content Grid */}
               <div style={{ 
                 display: "grid", 
-                gridTemplateColumns: "1fr 1fr", 
+                gridTemplateColumns: selectedPeriod === 'today' ? "1fr" : "1fr 1fr", 
                 gap: "2rem", 
                 marginBottom: "3rem"
               }}>
-                {/* Weekly Sales Chart */}
-                <div style={{
-                  background: "rgba(248, 250, 252, 0.8)",
-                  border: "1px solid rgba(226, 232, 240, 0.8)",
-                  borderRadius: "12px",
-                  overflow: "hidden"
-                }}>
+                {/* Weekly Sales Chart - Only show for week and longer periods */}
+                {selectedPeriod !== 'today' && (
                   <div style={{
-                    background: "linear-gradient(90deg, rgba(59,130,246,0.16), rgba(16,185,129,0.12))",
-                    padding: "1rem",
-                    borderBottom: "1px solid rgba(226, 232, 240, 0.8)"
+                    background: "rgba(248, 250, 252, 0.8)",
+                    border: "1px solid rgba(226, 232, 240, 0.8)",
+                    borderRadius: "12px",
+                    overflow: "hidden"
                   }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                      <TrendingUp size={18} style={{ color: "#059669" }} />
-                      <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 800, color: "#0f172a" }}>
-                        Weekly Sales
-                      </h3>
+                    <div style={{
+                      background: "linear-gradient(90deg, rgba(59,130,246,0.16), rgba(16,185,129,0.12))",
+                      padding: "1rem",
+                      borderBottom: "1px solid rgba(226, 232, 240, 0.8)"
+                    }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                        <TrendingUp size={18} style={{ color: "#059669" }} />
+                        <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 800, color: "#0f172a" }}>
+                          {selectedPeriod === 'week' ? 'Weekly Sales' :
+                           selectedPeriod === 'month' ? 'Monthly Sales by Week' :
+                           selectedPeriod === '3months' ? '3-Month Sales by Month' :
+                           '6-Month Sales by Month'}
+                        </h3>
+                      </div>
+                      <p style={{ margin: "0.25rem 0 0", fontSize: "0.85rem", color: "#64748b" }}>
+                        {selectedPeriod === 'week' ? 'Last 7 days performance' :
+                         selectedPeriod === 'month' ? 'Weekly breakdown for last month' :
+                         selectedPeriod === '3months' ? 'Monthly breakdown for last 3 months' :
+                         'Monthly breakdown for last 6 months'}
+                      </p>
                     </div>
-                    <p style={{ margin: "0.25rem 0 0", fontSize: "0.85rem", color: "#64748b" }}>
-                      Last 7 days performance
-                    </p>
+                    <WeeklySalesChart />
                   </div>
-                  <WeeklySalesChart />
-                </div>
+                )}
 
                 {/* Most Sold Items */}
                 <div style={{
