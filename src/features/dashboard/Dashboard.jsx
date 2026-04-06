@@ -27,6 +27,7 @@ export default function Dashboard() {
   const [selectedPeriod, setSelectedPeriod] = useState('week'); // week, month, 3months, 6months
   const [periodSales, setPeriodSales] = useState(0);
   const [periodTransactionCount, setPeriodTransactionCount] = useState(0);
+  const [totalCupsUsed, setTotalCupsUsed] = useState({ "8oz": 0, "16oz": 0, "22oz": 0 });
 
   async function handleLogout() {
     try {
@@ -249,6 +250,52 @@ export default function Dashboard() {
     const selectedPeriodSales = selectedPeriodTransactions.reduce((sum, transaction) => sum + (transaction.total || 0), 0);
     setPeriodSales(selectedPeriodSales);
     setPeriodTransactionCount(selectedPeriodTransactions.length);
+
+    // Calculate total cups used from all transactions
+    const cupUsage = { "8oz": 0, "16oz": 0, "22oz": 0 };
+    
+    transactions.forEach(transaction => {
+      if (transaction.items) {
+        transaction.items.forEach(item => {
+          // For variant products, size is stored in item.size
+          // For legacy products, size might be in the name
+          const productName = item.name?.toLowerCase() || "";
+          const productSize = item.size?.toLowerCase() || "";
+          
+          // Determine cup size - prioritize item.size for variant products
+          let cupSize = null;
+          
+          // First check the dedicated size field (for variant products)
+          if (productSize) {
+            if (productSize.includes("8oz") || productSize.includes("8 oz")) {
+              cupSize = "8oz";
+            } else if (productSize.includes("16oz") || productSize.includes("16 oz")) {
+              cupSize = "16oz";
+            } else if (productSize.includes("22oz") || productSize.includes("22 oz")) {
+              cupSize = "22oz";
+            }
+          }
+          
+          // Fallback to checking product name (for legacy products)
+          if (!cupSize) {
+            if (productName.includes("8oz") || productName.includes("8 oz")) {
+              cupSize = "8oz";
+            } else if (productName.includes("16oz") || productName.includes("16 oz")) {
+              cupSize = "16oz";
+            } else if (productName.includes("22oz") || productName.includes("22 oz")) {
+              cupSize = "22oz";
+            }
+          }
+          
+          // If it's a drink (has a cup size), add to cup usage
+          if (cupSize) {
+            cupUsage[cupSize] += item.quantity || 0;
+          }
+        });
+      }
+    });
+    
+    setTotalCupsUsed(cupUsage);
   }, [transactions, products, selectedPeriod]);
 
   // Weekly sales chart component
@@ -728,6 +775,44 @@ export default function Dashboard() {
                     >
                       Active
                     </span>
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    padding: "1rem",
+                    borderRadius: "16px",
+                    background: "rgba(255,255,255,0.75)",
+                    border: "1px solid rgba(226, 232, 240, 0.85)",
+                    boxShadow: "0 14px 30px rgba(15, 23, 42, 0.08)",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
+                    <div style={{ fontSize: "18px" }}>☕</div>
+                    <div style={{ fontSize: "0.9rem", color: "#64748b", fontWeight: 700 }}>Cups Used</div>
+                  </div>
+                  <div style={{ fontSize: "1.5rem", fontWeight: 900, color: "#0f172a" }}>
+                    {Object.values(totalCupsUsed).reduce((total, count) => total + count, 0).toLocaleString()}
+                  </div>
+                  <div style={{ marginTop: "0.65rem", display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                    {Object.entries(totalCupsUsed).map(([size, count]) => (
+                      <span
+                        key={size}
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          padding: "0.25rem 0.5rem",
+                          borderRadius: "6px",
+                          background: "rgba(139,69,19,0.10)",
+                          border: "1px solid rgba(139,69,19,0.25)",
+                          color: "#8B4513",
+                          fontWeight: 700,
+                          fontSize: "0.75rem",
+                        }}
+                      >
+                        {size}: {count}
+                      </span>
+                    ))}
                   </div>
                 </div>
               </div>

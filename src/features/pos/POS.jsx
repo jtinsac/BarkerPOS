@@ -1457,7 +1457,7 @@ const processCheckout = async (paymentMethod) => {
                                   </div>
                                 </button>
                               );
-                            })}}
+                            })}
                           </div>
                         </div>
                       ));
