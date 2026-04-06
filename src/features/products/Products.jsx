@@ -737,6 +737,27 @@ const Products = () => {
                     >
                       <div style={{ display: "flex", flexDirection: "column", gap: "0.15rem" }}>
                         <span>{product.name ?? "—"}</span>
+                        {product.hasVariants && product.variants && (
+                          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginTop: "0.25rem" }}>
+                            {Object.entries(product.variants).map(([size, variant]) => (
+                              <span
+                                key={size}
+                                style={{
+                                  fontSize: "0.75rem",
+                                  padding: "0.2rem 0.5rem",
+                                  borderRadius: "4px",
+                                  background: variant.stockStatus === "in-stock" 
+                                    ? "rgba(16, 185, 129, 0.1)" 
+                                    : "rgba(239, 68, 68, 0.1)",
+                                  color: variant.stockStatus === "in-stock" ? "#059669" : "#dc2626",
+                                  fontWeight: 600
+                                }}
+                              >
+                                {size}: ₱{variant.price.toLocaleString()}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </td>
 
@@ -774,7 +795,17 @@ const Products = () => {
                         fontVariantNumeric: "tabular-nums",
                       }}
                     >
-                      ₱{Number(product.price ?? 0).toLocaleString()}
+                      {product.hasVariants && product.variants ? (
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.25rem" }}>
+                          {Object.entries(product.variants).map(([size, variant]) => (
+                            <span key={size} style={{ fontSize: "0.85rem", color: "#64748b" }}>
+                              {size}: ₱{variant.price.toLocaleString()}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <span>₱{Number(product.price ?? 0).toLocaleString()}</span>
+                      )}
                     </td>
 
                     <td

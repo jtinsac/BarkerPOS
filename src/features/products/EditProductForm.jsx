@@ -6,7 +6,7 @@ import ImageUpload from "../../components/ImageUpload";
 const EditProductForm = ({ product, onSuccess }) => {
   // Initialize form state with the existing product data
   const [name, setName] = useState(product.name || "");
-  const [price, setPrice] = useState(product.price || "");
+  const [basePrice, setBasePrice] = useState(product.hasVariants ? "" : (product.price || ""));
   const [stockStatus, setStockStatus] = useState(product.stockStatus || "in-stock");
   const [category, setCategory] = useState(product.category || "");
   const [imageUrl, setImageUrl] = useState(product.imageUrl || null);
@@ -14,6 +14,20 @@ const EditProductForm = ({ product, onSuccess }) => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasVariants, setHasVariants] = useState(product.hasVariants || false);
+  const [variants, setVariants] = useState(() => {
+    if (product.hasVariants && product.variants) {
+      return Object.entries(product.variants).map(([size, variant]) => ({
+        size,
+        price: variant.price.toString(),
+        stock: variant.stockStatus === "in-stock" ? "1" : "0"
+      }));
+    }
+    return [
+      { size: "16oz", price: "", stock: "1" },
+      { size: "22oz", price: "", stock: "1" }
+    ];
+  });
 
   const inputStyle = {
     width: "100%",
@@ -48,6 +62,22 @@ const EditProductForm = ({ product, onSuccess }) => {
     boxShadow: "0 8px 20px rgba(15, 23, 42, 0.08)",
   };
 
+  const updateVariant = (index, field, value) => {
+    setVariants(prev => prev.map((variant, i) => 
+      i === index ? { ...variant, [field]: value } : variant
+    ));
+  };
+
+  const addVariant = () => {
+    setVariants(prev => [...prev, { size: "", price: "", stock: "1" }]);
+  };
+
+  const removeVariant = (index) => {
+    if (variants.length > 1) {
+      setVariants(prev => prev.filter((_, i) => i !== index));
+    }
+  };
+
   useEffect(() => {
     const productsRef = ref(db, "products");
     const unsubscribe = onValue(productsRef, (snapshot) => {
@@ -75,9 +105,24 @@ const EditProductForm = ({ product, onSuccess }) => {
     
     if (isSubmitting) return; // Prevent multiple submissions
     
-    if (!name || !price || !category) {
-      setError("Please fill all fields");
+    if (!name || !category) {
+      setError("Please fill all required fields");
       return;
+    }
+
+    if (hasVariants) {
+      // Validate variants
+      const validVariants = variants.filter(v => v.size && v.price && v.stock !== "");
+      if (validVariants.length === 0) {
+        setError("Please add at least one complete variant (size, price, and stock status)");
+        return;
+      }
+    } else {
+      // Validate single product
+      if (!basePrice) {
+        setError("Please enter a price for the product");
+        return;
+      }
     }
 
     setIsSubmitting(true);
@@ -85,15 +130,37 @@ const EditProductForm = ({ product, onSuccess }) => {
     setSuccess("");
 
     try {
-      // Update the product in Firebase
-      const productRef = ref(db, `products/${product.id}`);
-      await update(productRef, {
+      const productData = {
         name: name,
-        price: Number(price),
-        stockStatus: stockStatus,
         category: category,
         imageUrl: imageUrl || null,
-      });
+        hasVariants: hasVariants
+      };
+
+      if (hasVariants) {
+        // Product with size variants
+        const validVariants = variants.filter(v => v.size && v.price && v.stock !== "");
+        productData.variants = {};
+        validVariants.forEach(variant => {
+          const stockValue = Number(variant.stock);
+          productData.variants[variant.size] = {
+            price: Number(variant.price),
+            stock: stockValue,
+            stockStatus: stockValue > 0 ? "in-stock" : "out-of-stock"
+          };
+        });
+        // Set overall stock status based on variants
+        productData.stockStatus = Object.values(productData.variants).some(v => v.stockStatus === "in-stock") 
+          ? "in-stock" : "out-of-stock";
+      } else {
+        // Single product without variants
+        productData.price = Number(basePrice);
+        productData.stockStatus = stockStatus;
+      }
+
+      // Update the product in Firebase
+      const productRef = ref(db, `products/${product.id}`);
+      await update(productRef, productData);
 
       setSuccess("Product updated successfully!");
       
@@ -215,52 +282,183 @@ const EditProductForm = ({ product, onSuccess }) => {
         <div>
           <label
             style={{
-              display: "block",
+              display: "flex",
+              alignItems: "center",
+              gap: "0.5rem",
               marginBottom: "0.5rem",
               fontSize: "0.9rem",
               fontWeight: 600,
               color: "#374151",
+              cursor: "pointer"
             }}
           >
-            Price (₱)
+            <input
+              type="checkbox"
+              checked={hasVariants}
+              onChange={(e) => setHasVariants(e.target.checked)}
+              style={{
+                width: "16px",
+                height: "16px",
+                cursor: "pointer"
+              }}
+            />
+            This product has size variants (e.g., drinks with different sizes)
           </label>
-          <input
-            type="number"
-            placeholder="0.00"
-            value={price}
-            onChange={(e) => setPrice(e.target.value)}
-            style={inputStyle}
-            onFocus={(e) => Object.assign(e.target.style, inputFocusStyle)}
-            onBlur={(e) => Object.assign(e.target.style, inputStyle)}
-          />
         </div>
 
-        <div>
-          <label
-            style={{
-              display: "block",
-              marginBottom: "0.5rem",
-              fontSize: "0.9rem",
-              fontWeight: 600,
-              color: "#374151",
-            }}
-          >
-            Stock Status
-          </label>
-          <select
-            value={stockStatus}
-            onChange={(e) => setStockStatus(e.target.value)}
-            style={{
-              ...inputStyle,
-              cursor: "pointer",
-            }}
-            onFocus={(e) => Object.assign(e.target.style, inputFocusStyle)}
-            onBlur={(e) => Object.assign(e.target.style, inputStyle)}
-          >
-            <option value="in-stock">In Stock</option>
-            <option value="out-of-stock">Out of Stock</option>
-          </select>
-        </div>
+        {!hasVariants ? (
+          // Single product pricing
+          <>
+            <div>
+              <label
+                style={{
+                  display: "block",
+                  marginBottom: "0.5rem",
+                  fontSize: "0.9rem",
+                  fontWeight: 600,
+                  color: "#374151",
+                }}
+              >
+                Price (₱)
+              </label>
+              <input
+                type="number"
+                placeholder="0.00"
+                value={basePrice}
+                onChange={(e) => setBasePrice(e.target.value)}
+                style={inputStyle}
+                onFocus={(e) => Object.assign(e.target.style, inputFocusStyle)}
+                onBlur={(e) => Object.assign(e.target.style, inputStyle)}
+              />
+            </div>
+
+            <div>
+              <label
+                style={{
+                  display: "block",
+                  marginBottom: "0.5rem",
+                  fontSize: "0.9rem",
+                  fontWeight: 600,
+                  color: "#374151",
+                }}
+              >
+                Stock Status
+              </label>
+              <select
+                value={stockStatus}
+                onChange={(e) => setStockStatus(e.target.value)}
+                style={{
+                  ...inputStyle,
+                  cursor: "pointer",
+                }}
+                onFocus={(e) => Object.assign(e.target.style, inputFocusStyle)}
+                onBlur={(e) => Object.assign(e.target.style, inputStyle)}
+              >
+                <option value="in-stock">In Stock</option>
+                <option value="out-of-stock">Out of Stock</option>
+              </select>
+            </div>
+          </>
+        ) : (
+          // Variants section
+          <div>
+            <label
+              style={{
+                display: "block",
+                marginBottom: "0.75rem",
+                fontSize: "0.9rem",
+                fontWeight: 600,
+                color: "#374151",
+              }}
+            >
+              Size Variants
+            </label>
+            
+            {variants.map((variant, index) => (
+              <div
+                key={index}
+                style={{
+                  display: "flex",
+                  gap: "0.5rem",
+                  alignItems: "end",
+                  marginBottom: "0.75rem",
+                  padding: "1rem",
+                  background: "rgba(248, 250, 252, 0.5)",
+                  borderRadius: "10px",
+                  border: "1px solid rgba(226, 232, 240, 0.6)"
+                }}
+              >
+                <div style={{ flex: "1" }}>
+                  <label style={{ display: "block", marginBottom: "0.25rem", fontSize: "0.8rem", color: "#64748b" }}>Size</label>
+                  <input
+                    type="text"
+                    placeholder="e.g., 16oz, 22oz, Small, Large"
+                    value={variant.size}
+                    onChange={(e) => updateVariant(index, 'size', e.target.value)}
+                    style={{ ...inputStyle, fontSize: "0.9rem", padding: "0.6rem 0.8rem" }}
+                  />
+                </div>
+                <div style={{ flex: "1" }}>
+                  <label style={{ display: "block", marginBottom: "0.25rem", fontSize: "0.8rem", color: "#64748b" }}>Price (₱)</label>
+                  <input
+                    type="number"
+                    placeholder="0.00"
+                    value={variant.price}
+                    onChange={(e) => updateVariant(index, 'price', e.target.value)}
+                    style={{ ...inputStyle, fontSize: "0.9rem", padding: "0.6rem 0.8rem" }}
+                  />
+                </div>
+                <div style={{ flex: "1" }}>
+                  <label style={{ display: "block", marginBottom: "0.25rem", fontSize: "0.8rem", color: "#64748b" }}>Stock Status</label>
+                  <select
+                    value={variant.stock > 0 ? "in-stock" : "out-of-stock"}
+                    onChange={(e) => updateVariant(index, 'stock', e.target.value === "in-stock" ? "1" : "0")}
+                    style={{ ...inputStyle, fontSize: "0.9rem", padding: "0.6rem 0.8rem", cursor: "pointer" }}
+                  >
+                    <option value="in-stock">In Stock</option>
+                    <option value="out-of-stock">Out of Stock</option>
+                  </select>
+                </div>
+                {variants.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => removeVariant(index)}
+                    style={{
+                      padding: "0.6rem",
+                      borderRadius: "8px",
+                      border: "1px solid rgba(239, 68, 68, 0.3)",
+                      background: "rgba(239, 68, 68, 0.1)",
+                      color: "#dc2626",
+                      cursor: "pointer",
+                      fontSize: "0.8rem",
+                      fontWeight: 600
+                    }}
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+            ))}
+            
+            <button
+              type="button"
+              onClick={addVariant}
+              style={{
+                padding: "0.5rem 1rem",
+                borderRadius: "8px",
+                border: "1px solid rgba(16, 185, 129, 0.3)",
+                background: "rgba(16, 185, 129, 0.1)",
+                color: "#059669",
+                cursor: "pointer",
+                fontSize: "0.85rem",
+                fontWeight: 600,
+                marginBottom: "0.5rem"
+              }}
+            >
+              + Add Size Variant
+            </button>
+          </div>
+        )}
 
         <div>
           <label

@@ -1,15 +1,250 @@
 import { useEffect, useState, useContext } from "react";
-import { ref, onValue, push, update, get } from "firebase/database";
+import { ref, onValue, push, update, get, serverTimestamp } from "firebase/database";
 import { db, auth } from "../../lib/firebase";
 import { signOut } from "firebase/auth";
 import { UserContext } from "../../context/UserContext.jsx";
 import MainLayout from "../../components/layout/MainLayout.jsx";
 import Header from "../../components/layout/Header.jsx";
-import { ShoppingCart, X } from "lucide-react";
+import { ShoppingCart, X, Receipt } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
-// Custom Confirmation Modal Component
+// Size Selection Modal Component
+const SizeSelectionModal = ({ product, onSelectSize, onCancel }) => {
+  const [selectedSize, setSelectedSize] = useState("");
+  const [selectedVariant, setSelectedVariant] = useState(null);
+
+  const handleSizeChange = (size) => {
+    setSelectedSize(size);
+    setSelectedVariant(product.variants[size]);
+  };
+
+  const handleAddToCart = () => {
+    if (selectedSize && selectedVariant) {
+      onSelectSize({ ...selectedVariant, size: selectedSize });
+    }
+  };
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        width: "100vw",
+        height: "100vh",
+        background: "rgba(0, 0, 0, 0.6)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 99999,
+        backdropFilter: "blur(4px)"
+      }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onCancel();
+      }}
+    >
+      <div
+        style={{
+          background: "#ffffff",
+          borderRadius: "18px",
+          border: "1px solid rgba(226, 232, 240, 0.8)",
+          boxShadow: "0 25px 50px rgba(0, 0, 0, 0.3)",
+          maxWidth: "400px",
+          width: "90%",
+          overflow: "hidden",
+          fontFamily: 'system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif'
+        }}
+      >
+        {/* Header */}
+        <div
+          style={{
+            background: "linear-gradient(90deg, rgba(139,69,19,0.16), rgba(160,82,45,0.12))",
+            padding: "1.25rem",
+            borderBottom: "1px solid rgba(226, 232, 240, 0.8)"
+          }}
+        >
+          <h2
+            style={{
+              margin: 0,
+              fontSize: "1.1rem",
+              fontWeight: 800,
+              color: "#0f172a",
+              letterSpacing: "-0.02em"
+            }}
+          >
+            Select Size
+          </h2>
+          <p style={{
+            margin: "0.5rem 0 0",
+            fontSize: "0.9rem",
+            color: "#64748b"
+          }}>
+            {product.name}
+          </p>
+        </div>
+
+        {/* Content */}
+        <div style={{ padding: "1.5rem" }}>
+          <div style={{ marginBottom: "1.5rem" }}>
+            <label style={{
+              display: "block",
+              marginBottom: "0.75rem",
+              fontSize: "0.9rem",
+              fontWeight: 600,
+              color: "#374151"
+            }}>
+              Choose Size:
+            </label>
+            
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+              {Object.entries(product.variants).map(([size, variant]) => {
+                const isOutOfStock = variant.stockStatus !== "in-stock";
+                return (
+                  <label
+                    key={size}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: "1rem",
+                      borderRadius: "10px",
+                      border: selectedSize === size 
+                        ? "2px solid #8B4513" 
+                        : "1px solid rgba(226, 232, 240, 0.8)",
+                      background: isOutOfStock 
+                        ? "rgba(156, 163, 175, 0.1)" 
+                        : selectedSize === size 
+                          ? "rgba(139, 69, 19, 0.1)" 
+                          : "rgba(255,255,255,0.8)",
+                      cursor: isOutOfStock ? "not-allowed" : "pointer",
+                      transition: "all 150ms ease",
+                      opacity: isOutOfStock ? 0.6 : 1
+                    }}
+                    onClick={() => !isOutOfStock && handleSizeChange(size)}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                      <input
+                        type="radio"
+                        name="size"
+                        value={size}
+                        checked={selectedSize === size}
+                        onChange={() => handleSizeChange(size)}
+                        disabled={isOutOfStock}
+                        style={{ margin: 0 }}
+                      />
+                      <div>
+                        <div style={{ 
+                          fontWeight: "600", 
+                          fontSize: "0.95rem",
+                          color: isOutOfStock ? "#9ca3af" : "#0f172a"
+                        }}>
+                          {size}
+                        </div>
+                        <div style={{ 
+                          fontSize: "0.8rem", 
+                          color: isOutOfStock ? "#9ca3af" : "#64748b" 
+                        }}>
+                          {isOutOfStock ? "Out of stock" : "Available"}
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ 
+                      fontWeight: "700", 
+                      fontSize: "1rem",
+                      color: isOutOfStock ? "#9ca3af" : "#8B4513"
+                    }}>
+                      ₱{variant.price.toLocaleString()}
+                    </div>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Buttons */}
+          <div style={{
+            display: "flex",
+            gap: "0.75rem",
+            justifyContent: "center"
+          }}>
+            <button
+              onClick={onCancel}
+              style={{
+                flex: "1",
+                padding: "0.75rem",
+                borderRadius: "12px",
+                border: "1px solid rgba(226, 232, 240, 0.8)",
+                background: "rgba(248, 250, 252, 0.8)",
+                color: "#64748b",
+                fontSize: "0.95rem",
+                fontWeight: 600,
+                cursor: "pointer",
+                transition: "all 150ms ease"
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleAddToCart}
+              disabled={!selectedSize || !selectedVariant || selectedVariant.stockStatus !== "in-stock"}
+              style={{
+                flex: "1",
+                padding: "0.75rem",
+                borderRadius: "12px",
+                border: "none",
+                background: (!selectedSize || !selectedVariant || selectedVariant.stockStatus !== "in-stock")
+                  ? "rgba(156, 163, 175, 0.2)"
+                  : "linear-gradient(135deg, #8B4513 0%, #A0522D 100%)",
+                color: (!selectedSize || !selectedVariant || selectedVariant.stockStatus !== "in-stock") 
+                  ? "#9ca3af" : "white",
+                fontSize: "0.95rem",
+                fontWeight: 700,
+                cursor: (!selectedSize || !selectedVariant || selectedVariant.stockStatus !== "in-stock") 
+                  ? "not-allowed" : "pointer",
+                transition: "all 150ms ease",
+                boxShadow: (!selectedSize || !selectedVariant || selectedVariant.stockStatus !== "in-stock")
+                  ? "none"
+                  : "0 4px 12px rgba(139, 69, 19, 0.3)"
+              }}
+            >
+              Add to Cart
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 const CheckoutConfirmationModal = ({ cart, total, onConfirm, onCancel, isProcessing }) => {
   const [paymentMethod, setPaymentMethod] = useState("cash");
+
+  // Calculate cup usage for this transaction
+  const calculateCupUsage = () => {
+    const cupUsage = { "8oz": 0, "16oz": 0, "22oz": 0 };
+    
+    cart.forEach(item => {
+      const productName = item.name?.toLowerCase() || "";
+      const productSize = item.size?.toLowerCase() || "";
+      
+      let cupSize = null;
+      if (productSize.includes("8oz") || productName.includes("8oz") || productSize.includes("8 oz") || productName.includes("8 oz")) {
+        cupSize = "8oz";
+      } else if (productSize.includes("16oz") || productName.includes("16oz") || productSize.includes("16 oz") || productName.includes("16 oz")) {
+        cupSize = "16oz";
+      } else if (productSize.includes("22oz") || productName.includes("22oz") || productSize.includes("22 oz") || productName.includes("22 oz")) {
+        cupSize = "22oz";
+      }
+      
+      if (cupSize) {
+        cupUsage[cupSize] += item.quantity;
+      }
+    });
+    
+    return cupUsage;
+  };
+
+  const cupUsage = calculateCupUsage();
+  const totalCupsUsed = Object.values(cupUsage).reduce((total, count) => total + count, 0);
 
   return (
     <div
@@ -48,7 +283,7 @@ const CheckoutConfirmationModal = ({ cart, total, onConfirm, onCancel, isProcess
         {/* Header */}
         <div
           style={{
-            background: "linear-gradient(90deg, rgba(59,130,246,0.16), rgba(16,185,129,0.12))",
+            background: "linear-gradient(90deg, rgba(139,69,19,0.16), rgba(160,82,45,0.12))",
             padding: "1.25rem",
             borderBottom: "1px solid rgba(226, 232, 240, 0.8)"
           }}
@@ -103,8 +338,8 @@ const CheckoutConfirmationModal = ({ cart, total, onConfirm, onCancel, isProcess
                   gap: "0.5rem",
                   padding: "0.75rem 1rem",
                   borderRadius: "8px",
-                  border: paymentMethod === "cash" ? "2px solid #059669" : "1px solid rgba(226, 232, 240, 0.8)",
-                  background: paymentMethod === "cash" ? "rgba(16, 185, 129, 0.1)" : "rgba(255,255,255,0.8)",
+                  border: paymentMethod === "cash" ? "2px solid #8B4513" : "1px solid rgba(226, 232, 240, 0.8)",
+                  background: paymentMethod === "cash" ? "rgba(139, 69, 19, 0.1)" : "rgba(255,255,255,0.8)",
                   cursor: "pointer",
                   transition: "all 150ms ease",
                   flex: "1"
@@ -128,8 +363,8 @@ const CheckoutConfirmationModal = ({ cart, total, onConfirm, onCancel, isProcess
                   gap: "0.5rem",
                   padding: "0.75rem 1rem",
                   borderRadius: "8px",
-                  border: paymentMethod === "gcash" ? "2px solid #059669" : "1px solid rgba(226, 232, 240, 0.8)",
-                  background: paymentMethod === "gcash" ? "rgba(16, 185, 129, 0.1)" : "rgba(255,255,255,0.8)",
+                  border: paymentMethod === "gcash" ? "2px solid #8B4513" : "1px solid rgba(226, 232, 240, 0.8)",
+                  background: paymentMethod === "gcash" ? "rgba(139, 69, 19, 0.1)" : "rgba(255,255,255,0.8)",
                   cursor: "pointer",
                   transition: "all 150ms ease",
                   flex: "1"
@@ -183,7 +418,7 @@ const CheckoutConfirmationModal = ({ cart, total, onConfirm, onCancel, isProcess
                   <span style={{ color: "#374151" }}>
                     {item.name} (x{item.quantity})
                   </span>
-                  <span style={{ fontWeight: 600, color: "#059669" }}>
+                  <span style={{ fontWeight: 600, color: "#8B4513" }}>
                     ₱{(item.price * item.quantity).toLocaleString()}
                   </span>
                 </div>
@@ -212,7 +447,7 @@ const CheckoutConfirmationModal = ({ cart, total, onConfirm, onCancel, isProcess
               <span
                 style={{
                   fontWeight: 800,
-                  color: "#059669",
+                  color: "#8B4513",
                   fontSize: "1.1rem"
                 }}
               >
@@ -220,6 +455,8 @@ const CheckoutConfirmationModal = ({ cart, total, onConfirm, onCancel, isProcess
               </span>
             </div>
           </div>
+          
+
           
           <div
             style={{
@@ -276,7 +513,7 @@ const CheckoutConfirmationModal = ({ cart, total, onConfirm, onCancel, isProcess
               style={{
                 background: isProcessing 
                   ? "rgba(156, 163, 175, 0.2)" 
-                  : "linear-gradient(135deg, #059669 0%, #047857 100%)",
+                  : "linear-gradient(135deg, #8B4513 0%, #A0522D 100%)",
                 border: "none",
                 borderRadius: "12px",
                 padding: "0.75rem 1.5rem",
@@ -287,19 +524,19 @@ const CheckoutConfirmationModal = ({ cart, total, onConfirm, onCancel, isProcess
                 transition: "all 150ms ease",
                 boxShadow: isProcessing 
                   ? "none" 
-                  : "0 4px 12px rgba(5, 150, 105, 0.3)",
+                  : "0 4px 12px rgba(139, 69, 19, 0.3)",
                 opacity: isProcessing ? 0.6 : 1
               }}
               onMouseEnter={(e) => {
                 if (!isProcessing) {
                   e.target.style.transform = "translateY(-1px)";
-                  e.target.style.boxShadow = "0 6px 16px rgba(5, 150, 105, 0.4)";
+                  e.target.style.boxShadow = "0 6px 16px rgba(139, 69, 19, 0.4)";
                 }
               }}
               onMouseLeave={(e) => {
                 if (!isProcessing) {
                   e.target.style.transform = "translateY(0)";
-                  e.target.style.boxShadow = "0 4px 12px rgba(5, 150, 105, 0.3)";
+                  e.target.style.boxShadow = "0 4px 12px rgba(139, 69, 19, 0.3)";
                 }
               }}
             >
@@ -327,7 +564,7 @@ const Toast = ({ message, type, onClose }) => {
         padding: "1rem 1.5rem",
         borderRadius: "12px",
         background: type === "success" 
-          ? "linear-gradient(135deg, #059669 0%, #047857 100%)"
+          ? "linear-gradient(135deg, #8B4513 0%, #A0522D 100%)"
           : "linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)",
         color: "white",
         fontSize: "0.95rem",
@@ -387,7 +624,9 @@ const Toast = ({ message, type, onClose }) => {
 
 const POS = () => {
   const { role, user, userData } = useContext(UserContext);
+  const navigate = useNavigate();
   const [products, setProducts] = useState([]);
+  const [cups, setCups] = useState({ "8oz": 0, "16oz": 0, "22oz": 0 });
   const [cart, setCart] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -396,6 +635,8 @@ const POS = () => {
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
   const [isProcessingCheckout, setIsProcessingCheckout] = useState(false);
   const [showCart, setShowCart] = useState(false);
+  const [showSizeModal, setShowSizeModal] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
 
   async function handleLogout() {
     try {
@@ -429,18 +670,67 @@ const processCheckout = async (paymentMethod) => {
     const transactionRef = ref(db, "transactions");
     console.log("Transaction ref created:", transactionRef);
 
+    // Calculate cup usage from cart items
+    const cupUsage = { "8oz": 0, "16oz": 0, "22oz": 0 };
+    
+    cart.forEach(item => {
+      // For variant products, size is stored in item.size
+      // For legacy products, size might be in the name
+      const productName = item.name?.toLowerCase() || "";
+      const productSize = item.size?.toLowerCase() || "";
+      
+      console.log(`Checking product: ${item.name}, productName: ${productName}, productSize: ${productSize}`);
+      
+      // Determine cup size - prioritize item.size for variant products
+      let cupSize = null;
+      
+      // First check the dedicated size field (for variant products)
+      if (productSize) {
+        if (productSize.includes("8oz") || productSize.includes("8 oz")) {
+          cupSize = "8oz";
+        } else if (productSize.includes("16oz") || productSize.includes("16 oz")) {
+          cupSize = "16oz";
+        } else if (productSize.includes("22oz") || productSize.includes("22 oz")) {
+          cupSize = "22oz";
+        }
+      }
+      
+      // Fallback to checking product name (for legacy products)
+      if (!cupSize) {
+        if (productName.includes("8oz") || productName.includes("8 oz")) {
+          cupSize = "8oz";
+        } else if (productName.includes("16oz") || productName.includes("16 oz")) {
+          cupSize = "16oz";
+        } else if (productName.includes("22oz") || productName.includes("22 oz")) {
+          cupSize = "22oz";
+        }
+      }
+      
+      console.log(`Detected cup size: ${cupSize} for product: ${item.name}`);
+      
+      // If it's a drink (has a cup size), add to cup usage
+      if (cupSize) {
+        cupUsage[cupSize] += item.quantity;
+        console.log(`Added ${item.quantity} cups of size ${cupSize}. New total: ${cupUsage[cupSize]}`);
+      }
+    });
+
+    console.log("Cup usage:", cupUsage);
+
     // Create transaction object
     const newTransaction = {
-      createdAt: Date.now(),
+      createdAt: serverTimestamp(),
       userId: currentUser.uid,
       userName: userData?.name || "Unknown User",
       total,
       paymentMethod,
+      cupUsage, // Add cup usage to transaction
       items: cart.map(item => ({
         productId: item.id,
         name: item.name,
         price: item.price,
-        quantity: item.quantity
+        quantity: item.quantity,
+        size: item.size || null // Include size info if available
       }))
     };
 
@@ -451,6 +741,7 @@ const processCheckout = async (paymentMethod) => {
 
     const updates = {};
 
+    // Update product stock
     for (let item of cart) {
       const productRef = ref(db, `products/${item.id}`);
       const snapshot = await get(productRef);
@@ -463,16 +754,33 @@ const processCheckout = async (paymentMethod) => {
       }
     }
 
-    console.log("Stock updates:", updates);
+    // Update cup counts
+    Object.keys(cupUsage).forEach(cupSize => {
+      if (cupUsage[cupSize] > 0) {
+        updates[`cups/${cupSize}`] = (cups[cupSize] || 0) + cupUsage[cupSize];
+      }
+    });
+
+    console.log("Stock and cup updates:", updates);
 
     if (Object.keys(updates).length > 0) {
       await update(ref(db), updates);
-      console.log("Stock updated successfully");
+      console.log("Stock and cups updated successfully");
     }
 
     clearCart();
 
-    setToast({ message: `Transaction completed successfully via ${paymentMethod === 'cash' ? 'Cash' : 'GCash'}!`, type: "success" });
+    // Create success message with cup usage info
+    let cupMessage = "";
+    const usedCups = Object.entries(cupUsage).filter(([size, count]) => count > 0);
+    if (usedCups.length > 0) {
+      cupMessage = ` | Cups used: ${usedCups.map(([size, count]) => `${count}x ${size}`).join(", ")}`;
+    }
+
+    setToast({ 
+      message: `Transaction completed successfully via ${paymentMethod === 'cash' ? 'Cash' : 'GCash'}!${cupMessage}`, 
+      type: "success" 
+    });
     console.log("Checkout completed successfully");
   
   } catch(error) {
@@ -487,8 +795,9 @@ const processCheckout = async (paymentMethod) => {
 
   useEffect(() => {
     const productsRef = ref(db, "products");
+    const cupsRef = ref(db, "cups");
 
-    const unsubscribe = onValue(productsRef, (snapshot) => {
+    const unsubscribeProducts = onValue(productsRef, (snapshot) => {
       const data = snapshot.val();
 
       if (!data) {
@@ -504,8 +813,21 @@ const processCheckout = async (paymentMethod) => {
       setProducts(productsArray);
     });
 
+    const unsubscribeCups = onValue(cupsRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        setCups(data);
+      } else {
+        // Initialize cups data if it doesn't exist
+        const initialCups = { "8oz": 0, "16oz": 0, "22oz": 0 };
+        update(ref(db), { cups: initialCups });
+        setCups(initialCups);
+      }
+    });
+
     return () => {
-      unsubscribe();
+      unsubscribeProducts();
+      unsubscribeCups();
     };
   }, []);
 
@@ -525,22 +847,79 @@ const processCheckout = async (paymentMethod) => {
     return matchesSearch && matchesCategory;
   });
 
-  const addToCart = (product) => {
+  const handleProductClick = (product) => {
+    console.log("Product clicked:", product);
+    console.log("Has variants:", product.hasVariants);
+    console.log("Variants:", product.variants);
+    console.log("Variants keys length:", product.variants ? Object.keys(product.variants).length : 0);
+    
+    // Check if product has variants and they exist
+    if (product.hasVariants && product.variants && Object.keys(product.variants).length > 0) {
+      console.log("Showing size selection modal");
+      // Show size selection modal for products with variants
+      setSelectedProduct(product);
+      setShowSizeModal(true);
+    } else {
+      console.log("Adding directly to cart");
+      // Add directly to cart for single products
+      addToCart(product);
+    }
+  };
+
+  const handleSizeSelection = (selectedVariant) => {
+    if (selectedProduct && selectedVariant) {
+      addToCart(selectedProduct, selectedVariant);
+    }
+    setShowSizeModal(false);
+    setSelectedProduct(null);
+  };
+
+  const addToCart = (product, selectedVariant = null) => {
     // Don't add out-of-stock products to cart
     if (product.stockStatus !== "in-stock") {
       return;
     }
     
+    let cartItem;
+    if (product.hasVariants && selectedVariant) {
+      // Product with variants - use selected variant
+      if (selectedVariant.stockStatus !== "in-stock") {
+        return; // Don't add out-of-stock variants
+      }
+      cartItem = {
+        id: `${product.id}_${selectedVariant.size}`,
+        productId: product.id,
+        name: `${product.name} (${selectedVariant.size})`,
+        price: selectedVariant.price,
+        size: selectedVariant.size,
+        category: product.category,
+        imageUrl: product.imageUrl
+      };
+    } else if (!product.hasVariants) {
+      // Single product without variants
+      cartItem = {
+        id: product.id,
+        productId: product.id,
+        name: product.name,
+        price: product.price,
+        category: product.category,
+        imageUrl: product.imageUrl
+      };
+    } else {
+      // Product has variants but no variant selected - shouldn't happen
+      return;
+    }
+    
     setCart(prevCart => {
-      const existingItem = prevCart.find(item => item.id === product.id);
+      const existingItem = prevCart.find(item => item.id === cartItem.id);
       if (existingItem) {
         return prevCart.map(item =>
-          item.id === product.id
+          item.id === cartItem.id
             ? { ...item, quantity: item.quantity + 1 }
             : item
         );
       } else {
-        return [...prevCart, { ...product, quantity: 1 }];
+        return [...prevCart, { ...cartItem, quantity: 1 }];
       }
     });
   };
@@ -581,9 +960,9 @@ const processCheckout = async (paymentMethod) => {
       <style>{`
         .posPage {
           background:
-            radial-gradient(900px 500px at 10% 0%, rgba(59,130,246,0.18), transparent 60%),
-            radial-gradient(900px 500px at 90% 10%, rgba(16,185,129,0.14), transparent 55%),
-            radial-gradient(900px 500px at 50% 100%, rgba(168,85,247,0.10), transparent 55%);
+            radial-gradient(900px 500px at 10% 0%, rgba(139,69,19,0.18), transparent 60%),
+            radial-gradient(900px 500px at 90% 10%, rgba(160,82,45,0.14), transparent 55%),
+            radial-gradient(900px 500px at 50% 100%, rgba(210,105,30,0.10), transparent 55%);
         }
         .posCard { backdrop-filter: blur(6px); }
       `}</style>
@@ -611,14 +990,16 @@ const processCheckout = async (paymentMethod) => {
               style={{
                 padding: "0.6rem 0.85rem",
                 borderRadius: "14px",
-                border: "1px solid rgba(59,130,246,0.35)",
-                background: "rgba(59,130,246,0.10)",
-                color: "#1d4ed8",
+                border: "1px solid rgba(139,69,19,0.35)",
+                background: "rgba(139,69,19,0.10)",
+                color: "#8B4513",
                 fontWeight: 900,
               }}
             >
               {filteredProducts.length} Products
             </div>
+            
+
             <button
               onClick={() => setShowCart(!showCart)}
               style={{
@@ -660,6 +1041,40 @@ const processCheckout = async (paymentMethod) => {
                 </span>
               )}
             </button>
+            {role === "cashier" && (
+              <button
+                onClick={() => navigate('/cashier-sales')}
+                style={{
+                  padding: "0.75rem 1rem",
+                  borderRadius: "12px",
+                  border: "1px solid rgba(226, 232, 240, 0.8)",
+                  background: "rgba(255, 255, 255, 0.95)",
+                  color: "#6b7280",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  transition: "all 150ms ease",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                  boxShadow: "0 2px 8px rgba(15, 23, 42, 0.08)"
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.transform = "translateY(-1px)";
+                  e.target.style.boxShadow = "0 4px 12px rgba(15, 23, 42, 0.12)";
+                  e.target.style.background = "rgba(255, 255, 255, 1)";
+                  e.target.style.color = "#8B4513";
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.transform = "translateY(0)";
+                  e.target.style.boxShadow = "0 2px 8px rgba(15, 23, 42, 0.08)";
+                  e.target.style.background = "rgba(255, 255, 255, 0.95)";
+                  e.target.style.color = "#6b7280";
+                }}
+              >
+                <Receipt size={16} />
+                Today's Sales
+              </button>
+            )}
           </div>
         </div>
 
@@ -808,7 +1223,7 @@ const processCheckout = async (paymentMethod) => {
                             color: "#0f172a",
                             marginBottom: "1rem",
                             padding: "0.75rem 1rem",
-                            background: "linear-gradient(90deg, rgba(59,130,246,0.12), rgba(16,185,129,0.08))",
+                            background: "linear-gradient(90deg, rgba(139,69,19,0.12), rgba(160,82,45,0.08))",
                             border: "1px solid rgba(226, 232, 240, 0.6)",
                             borderRadius: "10px",
                             display: "flex",
@@ -843,7 +1258,7 @@ const processCheckout = async (paymentMethod) => {
                                   onClick={(e) => {
                                     e.preventDefault();
                                     if (!isOutOfStock) {
-                                      addToCart(product);
+                                      handleProductClick(product);
                                     }
                                   }}
                                   disabled={isOutOfStock}
@@ -939,7 +1354,7 @@ const processCheckout = async (paymentMethod) => {
                                           fontSize: "0.95rem",
                                           fontWeight: "700",
                                           color: "#0f172a",
-                                          marginBottom: "0.5rem",
+                                          marginBottom: "0.25rem",
                                           lineHeight: "1.2",
                                           wordWrap: "break-word",
                                           overflowWrap: "break-word",
@@ -973,28 +1388,66 @@ const processCheckout = async (paymentMethod) => {
                                         >
                                           {isOutOfStock ? "Out of Stock" : "In Stock"}
                                         </div>
+                                        {product.hasVariants && (
+                                          <div
+                                            style={{
+                                              fontSize: "0.75rem",
+                                              color: "#8B4513",
+                                              background: "rgba(139, 69, 19, 0.1)",
+                                              border: "1px solid rgba(139, 69, 19, 0.2)",
+                                              padding: "0.2rem 0.5rem",
+                                              borderRadius: "6px",
+                                              display: "inline-block",
+                                              fontWeight: "600",
+                                              flexShrink: 0
+                                            }}
+                                          >
+                                            Multiple Sizes
+                                          </div>
+                                        )}
                                       </div>
                                     </div>
                                     
                                     {/* Price */}
-                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "0.5rem", flexShrink: 0 }}>
-                                      <span
-                                        style={{
-                                          fontSize: "1rem",
-                                          fontWeight: "800",
-                                          color: isOutOfStock ? "#9ca3af" : "#059669"
-                                        }}
-                                      >
-                                        ₱{Number(product.price).toLocaleString()}
-                                      </span>
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
+                                      {product.hasVariants && product.variants ? (
+                                        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
+                                          <span style={{
+                                            fontSize: "0.7rem",
+                                            color: "#64748b",
+                                            marginBottom: "0.1rem"
+                                          }}>
+                                            Starting at:
+                                          </span>
+                                          <span
+                                            style={{
+                                              fontSize: "0.95rem",
+                                              fontWeight: "800",
+                                              color: isOutOfStock ? "#9ca3af" : "#8B4513"
+                                            }}
+                                          >
+                                            ₱{Math.min(...Object.values(product.variants).map(v => v.price)).toLocaleString()}
+                                          </span>
+                                        </div>
+                                      ) : (
+                                        <span
+                                          style={{
+                                            fontSize: "0.95rem",
+                                            fontWeight: "800",
+                                            color: isOutOfStock ? "#9ca3af" : "#8B4513"
+                                          }}
+                                        >
+                                          ₱{Number(product.price || 0).toLocaleString()}
+                                        </span>
+                                      )}
                                       {isOutOfStock && (
                                         <span style={{
-                                          fontSize: "0.7rem",
+                                          fontSize: "0.65rem",
                                           fontWeight: "600",
                                           color: "#dc2626",
                                           background: "rgba(239, 68, 68, 0.1)",
-                                          padding: "0.2rem 0.4rem",
-                                          borderRadius: "4px",
+                                          padding: "0.15rem 0.3rem",
+                                          borderRadius: "3px",
                                           border: "1px solid rgba(239, 68, 68, 0.2)"
                                         }}>
                                           UNAVAILABLE
@@ -1004,7 +1457,7 @@ const processCheckout = async (paymentMethod) => {
                                   </div>
                                 </button>
                               );
-                            })}
+                            })}}
                           </div>
                         </div>
                       ));
@@ -1027,7 +1480,7 @@ const processCheckout = async (paymentMethod) => {
                 {/* Cart Header */}
                 <div
                   style={{
-                    background: "linear-gradient(90deg, rgba(59,130,246,0.16), rgba(16,185,129,0.12))",
+                    background: "linear-gradient(90deg, rgba(139,69,19,0.16), rgba(160,82,45,0.12))",
                     border: "1px solid rgba(226, 232, 240, 0.8)",
                     borderRadius: "12px",
                     padding: "1rem",
@@ -1201,7 +1654,7 @@ const processCheckout = async (paymentMethod) => {
                         <span style={{ fontSize: "1.1rem", fontWeight: "700", color: "#0f172a" }}>
                           Total:
                         </span>
-                        <span style={{ fontSize: "1.3rem", fontWeight: "800", color: "#059669" }}>
+                        <span style={{ fontSize: "1.3rem", fontWeight: "800", color: "#8B4513" }}>
                           ₱{total.toLocaleString()}
                         </span>
                       </div>
@@ -1214,23 +1667,23 @@ const processCheckout = async (paymentMethod) => {
                           padding: "0.65rem",
                           borderRadius: "12px",
                           border: "none",
-                          background: "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)",
+                          background: "linear-gradient(135deg, #8B4513 0%, #A0522D 100%)",
                           color: "white",
                           fontSize: "0.85rem",
                           fontWeight: "600",
                           cursor: "pointer",
                           transition: "all 150ms ease",
-                          boxShadow: "0 4px 12px rgba(59, 130, 246, 0.3)"
+                          boxShadow: "0 4px 12px rgba(139, 69, 19, 0.3)"
                         }}
                         onMouseEnter={(e) => {
-                          e.target.style.background = "linear-gradient(135deg, #2563eb 0%, #1e40af 100%)";
+                          e.target.style.background = "linear-gradient(135deg, #A0522D 0%, #8B4513 100%)";
                           e.target.style.transform = "translateY(-1px)";
-                          e.target.style.boxShadow = "0 6px 16px rgba(59, 130, 246, 0.4)";
+                          e.target.style.boxShadow = "0 6px 16px rgba(139, 69, 19, 0.4)";
                         }}
                         onMouseLeave={(e) => {
-                          e.target.style.background = "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)";
+                          e.target.style.background = "linear-gradient(135deg, #8B4513 0%, #A0522D 100%)";
                           e.target.style.transform = "translateY(0)";
-                          e.target.style.boxShadow = "0 4px 12px rgba(59, 130, 246, 0.3)";
+                          e.target.style.boxShadow = "0 4px 12px rgba(139, 69, 19, 0.3)";
                         }}
                       >
                         Continue<br />Shopping
@@ -1242,7 +1695,7 @@ const processCheckout = async (paymentMethod) => {
                           padding: "0.65rem",
                           borderRadius: "12px",
                           border: "none",
-                          background: "linear-gradient(135deg, #059669 0%, #047857 100%)",
+                          background: "linear-gradient(135deg, #D2691E 0%, #CD853F 100%)",
                           color: "white",
                           fontSize: "0.95rem",
                           fontWeight: "700",
@@ -1251,11 +1704,11 @@ const processCheckout = async (paymentMethod) => {
                         }}
                         onMouseEnter={(e) => {
                           e.target.style.transform = "translateY(-1px)";
-                          e.target.style.boxShadow = "0 6px 16px rgba(5, 150, 105, 0.4)";
+                          e.target.style.boxShadow = "0 6px 16px rgba(210, 105, 30, 0.4)";
                         }}
                         onMouseLeave={(e) => {
                           e.target.style.transform = "translateY(0)";
-                          e.target.style.boxShadow = "0 4px 12px rgba(5, 150, 105, 0.3)";
+                          e.target.style.boxShadow = "0 4px 12px rgba(210, 105, 30, 0.3)";
                         }}
                       >
                         Checkout
@@ -1279,6 +1732,16 @@ const processCheckout = async (paymentMethod) => {
         <div style={{ paddingTop: "80px", height: "100vh", overflow: "hidden" }}>
           {posContent}
         </div>
+        {showSizeModal && selectedProduct && (
+          <SizeSelectionModal
+            product={selectedProduct}
+            onSelectSize={handleSizeSelection}
+            onCancel={() => {
+              setShowSizeModal(false);
+              setSelectedProduct(null);
+            }}
+          />
+        )}
         {showCheckoutModal && (
           <CheckoutConfirmationModal
             cart={cart}
@@ -1306,6 +1769,16 @@ const processCheckout = async (paymentMethod) => {
       <MainLayout onLogout={handleLogout}>
         {posContent}
       </MainLayout>
+      {showSizeModal && selectedProduct && (
+        <SizeSelectionModal
+          product={selectedProduct}
+          onSelectSize={handleSizeSelection}
+          onCancel={() => {
+            setShowSizeModal(false);
+            setSelectedProduct(null);
+          }}
+        />
+      )}
       {showCheckoutModal && (
         <CheckoutConfirmationModal
           cart={cart}

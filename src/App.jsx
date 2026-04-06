@@ -10,6 +10,7 @@ import POS from "./features/pos/POS";
 import Products from "./features/products/Products";
 import CreateProduct from "./features/products/CreateProduct";
 import Transactions from "./features/transactions/Transactions";
+import CashierSales from "./features/cashier/CashierSales";
 
 function App() {
   return (
@@ -64,6 +65,15 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={["owner"]}>
               <Transactions />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/cashier-sales"
+          element={
+            <ProtectedRoute allowedRoles={["cashier"]}>
+              <CashierSales />
             </ProtectedRoute>
           }
         />

@@ -67,6 +67,12 @@ const Header = () => {
     });
   };
 
+  // Use coffee theme for cashiers, blue-green theme for owners
+  const isCashier = userData?.role === 'cashier';
+  const headerBackground = isCashier 
+    ? "linear-gradient(90deg, rgba(139,69,19,0.16), rgba(160,82,45,0.12))"
+    : "linear-gradient(90deg, rgba(59,130,246,0.16), rgba(16,185,129,0.12))";
+
   return (
     <header
       style={{
@@ -75,7 +81,7 @@ const Header = () => {
         left: 0,
         right: 0,
         zIndex: 1000,
-        background: "linear-gradient(90deg, rgba(59,130,246,0.16), rgba(16,185,129,0.12))",
+        background: headerBackground,
         borderBottom: "1px solid #e2e8f0",
         backdropFilter: "blur(6px)",
         boxShadow: "0 4px 16px rgba(15, 23, 42, 0.08)",
